@@ -1,6 +1,6 @@
 **CEH v13 AI (312-50) Study Guide - Module 03: Scanning Networks**
 
-Source: 10 pages of screenshots from the official Module 03 theory videos (19 slides, numbered 2 to 42). Content marked "ADDED CONTEXT" comes from outside the screenshots. Items marked "verify" should be checked against current official sources. Items marked [UNCLEAR on page N] were too small to read with full confidence. The screenshots show only part of the official module, so the added context fills the gaps the exam commonly tests (Nmap flags, hping3, port states, banner grabbing tools).
+Source: 10 pages of screenshots from the official Module 03 theory videos (20 screenshots, slides 2 to 42). Content marked "ADDED CONTEXT" comes from outside the screenshots. Items marked "verify" should be checked against current official sources. Items marked [UNCLEAR on page N] were too small or blurry to read with full confidence.
 
 ## 1. Module at a Glance
 
@@ -8,612 +8,1205 @@ Source: 10 pages of screenshots from the official Module 03 theory videos (19 sl
 
 **What this module is (5 lines):**
 
-1. It defines network scanning: finding live hosts, open ports, running services, and the operating system of a target, right after footprinting.
-2. It reviews the TCP flags and the three-way handshake, because every scan technique is built on how TCP answers a probe.
-3. It covers host discovery (ping scans), port scanning (connect, SYN, Xmas, FIN, NULL, Maimon, ACK, window, idle, UDP, SCTP, SSDP, IPv6), service version discovery, and OS discovery (TTL, window size, banner grabbing).
-4. It shows how attackers scan beyond an IDS or firewall: fragmentation, source routing, source port manipulation, decoys, IP and MAC spoofing, custom packets, random host order, bad checksums, proxies, and anonymizers.
-5. It ends with countermeasures for port scanning and for IP spoofing.
+1. Scanning is phase 2 of the five hacking phases. Reconnaissance (Module 02) found the target. Scanning now finds live hosts, open ports, running services, and the operating system.
+2. It starts with TCP/IP basics: the six TCP flags and the three-way handshake, because every scan is built from these.
+3. It covers host discovery (ping scans), port scanning (TCP, UDP, SCTP, SSDP, IPv6), service version discovery, and OS discovery or banner grabbing.
+4. It shows ten ways to scan beyond an IDS or firewall: fragmentation, source routing, source port manipulation, decoys, IP spoofing, MAC spoofing, custom packets, random host order, bad checksums, proxies, and anonymizers.
+5. It ends with countermeasures against port scanning and IP spoofing.
 
-**Why it matters:** Footprinting gives names. Scanning turns names into targets: which machines are alive, which doors are open, and which software sits behind each door. Nmap and Hping3 flags are among the most tested items in the whole CEH exam.
+**Why it matters:** Scanning builds the list of doors an attacker can try. Nmap alone fills a large share of the questions, so knowing each flag and what it sends is worth many exam marks.
 
 **What the exam usually asks from it:**
 
-- Which Nmap flag runs which scan (-sS, -sT, -sX, -sF, -sN, -sA, -sW, -sI, -sU) and which host discovery flag does what (-PE, -PP, -PM, -PR, -PU, -PS, -PA, -PO, -sn, -Pn).
-- What response a closed, open, or filtered port gives to each scan type.
-- Which flags are set in an Xmas, FIN, NULL, or Maimon probe.
-- How to guess an OS from TTL and TCP window size.
-- Which technique evades an IDS or firewall (fragmentation, decoys, spoofing, source port, source routing).
-- What an Hping3 command does (for example the -a option spoofs the source address).
-- Which countermeasure stops which technique (ingress and egress filtering for spoofing, firewall rules for scans).
+- Which Nmap switch performs which scan or ping type (-sn, -PE, -PP, -PM, -PR, -PU, -PS, -PA, -PO, -sT, -sS, -sX, -sF, -sN, -sM, -sA, -sW, -sI, -sU, -sY, -sZ, -sV, -6).
+- What a scan sends and how an open, closed, or filtered port answers.
+- Which scans fail against Windows (FIN, NULL, Xmas).
+- Which tool fits a job: Nmap, Hping3, Metasploit, NetScanTools Pro, Colasoft Packet Builder, Wireshark, Angry IP Scanner.
+- How to guess the OS from TTL and TCP window size.
+- Which evasion technique matches a scenario (decoy, fragmentation, spoofing, source port, source routing).
+- Which countermeasure stops a given scan or spoof (ingress and egress filtering, ICMP filtering, random initial sequence numbers).
 
 **The 10 things to remember most:**
 
-1. Scanning is phase 2 of the five hacking phases (after reconnaissance). It finds live hosts, open ports and services, and the OS.
-2. The six TCP flags: URG, ACK, PSH, RST, SYN, FIN. SYN starts a connection, FIN ends it politely, RST kills it at once.
-3. Three-way handshake: SYN -> SYN/ACK -> ACK. The ACK number is the received sequence number plus 1.
-4. Host discovery flags: -sn (ping scan only, no port scan), -PE echo, -PP timestamp, -PM address mask, -PR ARP, -PU UDP, -PS TCP SYN, -PA TCP ACK, -PO IP protocol, -Pn (skip discovery).
-5. Port scan flags: -sT connect, -sS half-open (stealth), -sX Xmas, -sF FIN, -sN NULL, -sM Maimon, -sA ACK, -sW window, -sI idle, -sU UDP, -sY and -sZ SCTP, -6 IPv6.
-6. Xmas = FIN + PSH + URG. NULL = no flags. FIN, NULL, and Xmas: an open port stays silent, a closed port answers RST. They fail against Windows, which answers RST for every port.
-7. ACK scan maps firewall rules (filtered or unfiltered). It cannot tell open from closed.
-8. Idle scan (-sI zombie) hides the scanner's own IP by using a zombie host's IP ID counter.
-9. OS clues: TTL 64 = Linux and FreeBSD, 128 = Windows, 255 = Cisco, Solaris, OpenBSD, AIX. -sV finds service versions. -O (added) guesses the OS.
-10. Evasion flags: -f fragments, -g sets source port, -D decoys, --spoof-mac, --randomize-hosts, --badsum. Hping3 -a spoofs the source IP. Defenses: ingress and egress filtering, firewall and IDS rules, ICMP filtering, patched firmware.
+1. Scanning = phase 2. Goals: live hosts, open ports, services, OS, and vulnerabilities.
+2. The six TCP flags are URG, ACK, PSH, RST, SYN, FIN. The handshake is SYN, then SYN/ACK, then ACK.
+3. Host discovery uses nmap -sn plus a probe switch: -PE echo, -PP timestamp, -PM address mask, -PR ARP, -PU UDP, -PS TCP SYN, -PA TCP ACK, -PO IP protocol.
+4. Port scan switches: -sT connect, -sS half-open (stealth), -sX Xmas, -sF FIN, -sN NULL, -sM Maimon, -sA ACK, -sW window, -sI idle (zombie), -sU UDP, -sY SCTP INIT, -sZ SCTP COOKIE ECHO, -6 IPv6, -sV version.
+5. SYN scan sends SYN, gets SYN/ACK, and replies RST. It never finishes the handshake. Connect scan finishes it.
+6. Xmas = FIN + PSH + URG. NULL = no flags. FIN = FIN only. A closed port answers RST. An open port stays silent. These three do not work on Windows.
+7. OS clue from the first reply packet: TTL 64 = Linux or FreeBSD, TTL 128 = Windows, TTL 255 = Cisco, Solaris, AIX, OpenBSD.
+8. Evasion switches: -f (fragment), -g (source port), -D (decoy), --spoof-mac, --randomize-hosts, --badsum. Hping3 -a spoofs the source IP.
+9. Banner grabbing has two types. Active sends crafted packets. Passive reads error messages, sniffed traffic, and page extensions such as .aspx.
+10. Spoofing defenses: ingress filtering, egress filtering, random initial sequence numbers, no IP-based authentication, encryption (IPsec, TLS, SSH, HTTPS).
 
 ## 2. Big Picture Map
 
-The module follows the order of a real scan: find who is alive, find what is open on them, find what they run, then try to do all of that without being caught. Defense closes the loop.
+The module follows one flow. First learn the packet basics (flags and handshake). Then find live hosts. Then probe ports. Then identify services and the OS. Then learn how an attacker hides these scans from an IDS or firewall. Last, learn how a defender blocks them.
 
 ```text
- Module 02          MODULE 03                      Module 04
- Footprinting  -->  SCANNING (phase 2)       -->   Enumeration
- (who and what)     (alive and open)               (details)
-
- +--------------+   +--------------+   +--------------+
- | 1 HOST       |-->| 2 PORT AND   |-->| 3 OS         |
- | DISCOVERY    |   | SERVICE      |   | DISCOVERY    |
- | who is alive |   | what is open |   | what system  |
- +--------------+   +--------------+   +------+-------+
-                                              |
-                                              v
- +--------------+   +-----------------------------+
- | 5 DEFENSE    |<--| 4 SCAN BEYOND IDS AND       |
- | block and    |   | FIREWALL (evasion)          |
- | detect       |   | fragment spoof decoy        |
- +--------------+   +-----------------------------+
+RECON (Module 02)
+      |
+      v
++------------------------------------------------------------+
+| SCANNING (Module 03) = find the doors                      |
+|                                                            |
+|  1 Host discovery  -> which hosts are alive   (-sn -P*)    |
+|  2 Port scanning   -> which ports are open    (-sT -sS ...)|
+|  3 Service version -> what software listens   (-sV)        |
+|  4 OS discovery    -> which OS runs           (TTL, banner)|
+|  5 Evade IDS/FW    -> do 1 to 4 without alarms             |
++------------------------------------------------------------+
+      |
+      v
+ENUMERATION (Module 04) -> VULNERABILITY ANALYSIS (Module 05)
 ```
 
-How each stage maps to the questions it answers:
+The same idea as a table. Read it as "question the attacker asks" -> "technique".
 
-| Stage | Question answered | Main techniques | Main tools |
+| Question | Technique | Main switch family | Section |
 | --- | --- | --- | --- |
-| 1 Host discovery | Which IPs are alive? | ICMP, ARP, UDP, TCP, IP protocol pings | Nmap, Angry IP Scanner |
-| 2 Port scanning | Which ports are open? | Connect, SYN, Xmas, FIN, ACK, idle, UDP | Nmap, Hping3, Metasploit |
-| 2 Service discovery | Which software and version? | Version detection (-sV) | Nmap, Zenmap |
-| 3 OS discovery | Which operating system? | TTL, window size, banner grabbing | Wireshark, Nmap |
-| 4 Evasion | How to avoid IDS or firewall? | Fragments, decoys, spoofing, proxies | Nmap, Hping3, Packet Builder |
-| 5 Defense | How to stop scans? | Filtering, rules, updates | Firewall, IDS |
+| Who is alive? | Host discovery | -sn with -P* | 3.5 |
+| Which ports are open? | Port scanning | -sT -sS -sX -sF -sN | 3.6 to 3.15 |
+| What runs on the port? | Service version | -sV | 3.16 |
+| Which OS is it? | OS discovery | TTL, window, -O | 3.17, 3.22 |
+| How do I avoid alarms? | IDS and firewall evasion | -f -g -D --badsum | 3.18 to 3.28 |
+| How does the defender stop me? | Countermeasures | Rules and filters | 3.29, 3.30 |
 
-The screenshots follow this order loosely. This guide keeps the order of your screenshots so you can match it with the videos.
+> **REMEMBER:** The notes do not follow the logical order exactly. The overview of evasion techniques (slide 25) appears after the banner grabbing slide. This guide keeps the order of your screenshots so you can match it with the videos. Use the table above as the logical map.
+
+The five hacking phases (the exam asks these in order):
+
+1. Reconnaissance
+2. Scanning (this module)
+3. Gaining access
+4. Maintaining access
+5. Clearing tracks
+
+How to attack any scanning question in four steps:
+
+1. Decide what is being found: a live host, an open port, a service, or an OS.
+2. Decide the protocol: ICMP, ARP, TCP, UDP, or SCTP.
+3. Decide whether a firewall or IDS is in the way. If yes, think evasion.
+4. Match the exact switch or tool name to the keyword in the question.
 
 ## 3. Topic-by-Topic Guide
 
-The topics below follow the order of the screenshots.
+The topics below follow the order of the screenshots. Where one slide holds a tree of techniques (host discovery, port scanning), each technique gets its own sub-section.
 
 ### 3.1 Learning Objectives of Module 03
 
-**What it is (simple words):** The opening slide lists six goals for the module. They are also the skeleton of this guide.
+**What it is:** The opening slide lists six goals for the module. They are also the skeleton of this guide.
 
 1. Explain network scanning concepts.
 2. Demonstrate various scanning techniques for host discovery.
-3. Demonstrate various scanning techniques for port and service discovery.
-4. Demonstrate various scanning techniques for OS discovery.
+3. Demonstrate various techniques for port and service discovery.
+4. Demonstrate various techniques for OS discovery.
 5. Demonstrate various techniques for scanning beyond IDS and firewall.
 6. Explain network scanning countermeasures.
 
-**How the objectives map to the topics:**
+The video caption on this screenshot reads "we're gonna start with just what scanning is." This is the instructor starting with the concept before the techniques.
 
-| Objective | Topics in this guide |
-| --- | --- |
-| 1 Concepts | 3.2 overview, 3.3 TCP flags, 3.4 TCP/IP communication |
-| 2 Host discovery | 3.5 host discovery techniques |
-| 3 Port and service discovery | 3.6 port scanning, 3.7 service version discovery |
-| 4 OS discovery | 3.8 identify OS, 3.13 banner grabbing |
-| 5 Beyond IDS and firewall | 3.9 to 3.12, 3.14 to 3.18 |
-| 6 Countermeasures | 3.19 port scanning, 3.20 IP spoofing |
+**EXAM FOCUS:** The objectives show the question pools: concepts, host discovery, port and service discovery, OS discovery, IDS and firewall evasion, and countermeasures. Expect questions from every pool.
 
-**EXAM FOCUS:** The objectives show the question pools: concepts, host discovery, port and service discovery, OS discovery, evasion, and countermeasures. Expect questions from every pool.
-
-**Memory trick:** "Can Hackers Please Obey Every Command?" -> Concepts, Hosts, Ports, OS, Evasion, Countermeasures.
+**Memory trick:** "Can Hackers Pick Operating-system Bypass Codes" -> Concepts, Host discovery, Port and service discovery, OS discovery, Bypass IDS/firewall, Countermeasures.
 
 ### 3.2 Overview of Network Scanning
 
-**What it is (simple words):** Network scanning is a set of procedures used for identifying hosts, ports, and services in a network. It is one of the components of information gathering. An attacker uses it to create a profile of the target organization.
+**What it is (simple words):** Network scanning is a set of procedures for identifying hosts, ports, and services in a network. It is one part of information gathering. The attacker uses it to build a profile of the target organization.
 
-- **Host:** any device with an IP address on a network (server, PC, router, printer, camera).
-- **Live host:** a host that is switched on and answers probes.
-- **Port:** a numbered door (0 to 65535) on a host. Each network service listens on one or more ports.
-- **Service:** a program that listens on a port, such as a web server on port 80.
-- **Probe:** a packet sent only to see how the target answers.
+Define the words first:
 
-**Analogy:** Footprinting studied the building from the street. Scanning walks the corridors. It checks which rooms are occupied (live hosts), which doors are unlocked (open ports), and who is working inside (services and OS).
+- **Host:** any device on a network that has an IP address (a PC, server, router, printer, camera).
+- **Port:** a numbered door on a host (0 to 65535). A program listens behind a door. Port 80 is usually a web server.
+- **Service:** the program that listens on a port (for example a web server or an FTP server).
+- **Probe:** a packet the scanner sends to see how the target reacts.
+- **Packet:** a small chunk of data sent over a network. It has a header (addresses and control fields) and a payload (the data).
+
+**Analogy:** You stand outside a large office building at night. You walk around it. Which windows have lights on? (live hosts). Which doors are unlocked? (open ports). What kind of lock is on each door? (service versions). Which company built the building? (operating system). That walk is scanning.
 
 **How it works (numbered steps):**
 
-1. The attacker sends TCP/IP probes to the network.
-2. The network (its hosts and devices) sends back data.
-3. The attacker reads the replies: who answered, from which port, with which flags, and with which banner.
-4. The result is a list of live IP addresses, open ports, services, and likely OS.
+1. The attacker takes the target range from the reconnaissance phase.
+2. The attacker sends TCP/IP probes to the target network (the process diagram on the slide).
+3. The target network sends replies, or stays silent. Both are information.
+4. The attacker reads the replies and builds a list of live hosts, open ports, services, and OS.
+5. The list feeds the next phases: enumeration and vulnerability analysis.
 
-```text
- +----------+     TCP/IP probes      +-----------+
- | Attacker |----------------------->|  Network  |
- |          |<-----------------------|  (hosts)  |
- +----------+  network information   +-----------+
-```
+**The four objectives of network scanning (from the slide):**
 
-**Objectives of network scanning (from the slide):**
+1. Discover live hosts, IP addresses, and open ports of live hosts.
+2. Discover operating systems and system architecture.
+3. Discover services running on hosts.
+4. Discover vulnerabilities in live hosts.
 
-1. To discover live hosts, IP addresses, and open ports of live hosts.
-2. To discover operating systems and system architecture.
-3. To discover services running on hosts.
-4. To discover vulnerabilities in live hosts.
+**Real-world use:** A penetration tester has written approval to test a company that owns 10.10.1.0/24. She scans the range. Six hosts answer. One host shows ports 21, 80, 135, 139, 445, and 3389 open. She now knows it is probably a Windows machine with FTP, a web server, file sharing, and remote desktop. She reports which of these should not be exposed.
 
-**Tools named on the slide:** Nmap, Hping3, Metasploit, NetScanTools Pro.
+**Tools and commands used here:** The slide names four tools.
 
-**ADDED CONTEXT: three kinds of scanning.** Port scanning finds open ports and services on a host. Network scanning finds live hosts and network layout. Vulnerability scanning checks hosts for known weaknesses (Module 05). The exam may ask you to pick which kind fits a sentence.
+- **Nmap** (Network Mapper): the standard free, open-source scanner. Its GUI is Zenmap.
+- **Hping3:** a command-line tool that builds custom TCP/IP packets.
+- **Metasploit:** an exploitation framework that also has scanner modules.
+- **NetScanTools Pro:** a Windows toolkit with ping, port scan, and packet tools.
 
-**ADDED CONTEXT: the CEH scanning methodology (verify the exact names).**
+> **ADDED CONTEXT:** Scanning has three common types. Network scanning (host discovery) lists live hosts. Port scanning lists open ports. Vulnerability scanning checks hosts for known weaknesses (Module 05). A typical CEH scanning methodology runs in this order (verify the exact order in your courseware): check live systems, scan ports, scan beyond IDS and firewall, banner grabbing, vulnerability scanning, draw a network diagram, and prepare proxies.
 
-1. Check for live systems (host discovery).
-2. Check for open ports (port scanning).
-3. Scan beyond IDS and firewall.
-4. Perform banner grabbing (OS and service discovery).
-5. Scan for vulnerabilities.
-6. Draw network diagrams of vulnerable hosts.
-7. Prepare proxies.
+> **ADDED CONTEXT:** Scanning a network you do not own, or do not have written permission to test, is illegal in many countries. A real engagement has a signed scope document and rules of engagement.
 
-Your screenshots cover steps 1 to 4 and 7 (as proxies and anonymizers). Steps 5 and 6 belong to later modules and the full courseware.
+**AI angle (ADDED CONTEXT):** AI helps the attacker and the tester write scan commands and read results. The v13 course teaches AI tools such as ShellGPT for host and OS discovery (see the course description at https://www.skillsoft.com/course/ceh-v13-scanning-e0c777b7-f351-4518-8a1d-235b7bb2230c). Example prompt: "Give me the Nmap command to find live hosts in 10.10.1.0/24 without scanning ports, for an authorized test." Expected answer: nmap -sn 10.10.1.0/24. The defender uses AI-based monitoring to spot scan patterns. Risk: the AI can invent a wrong flag, and pasting client scan data into a public AI tool leaks sensitive information. Always check the command and keep client data out of public tools.
 
-> **TRAP:** Scanning is not the same as footprinting. Footprinting uses public sources and can be passive. Scanning sends packets to the target, so it is always active.
+**Countermeasures and defense:** See 3.29. In short: firewall and IDS rules, closed unused ports, and monitoring.
 
-> **EXAM TIP:** Authorization matters. A penetration tester scans only the IP ranges named in the signed scope. Scanning without written permission can be a crime in many countries.
-
-**Real-world use:** A tester has a Whois result that says the client owns 203.0.113.0/24. She scans that range and finds 14 live hosts, one with an open Telnet port. Result: the client closes Telnet and moves to SSH.
-
-**Tools and commands used here:** Nmap, Hping3, Metasploit, NetScanTools Pro (details in sections 4 and 5).
-
-**AI angle:** An LLM (ChatGPT) or a command-line tool such as ShellGPT (sgpt) can write the scan command from plain English and explain the output. The screenshots do not show AI slides for this module, so this is ADDED CONTEXT. Example prompt: "Write an Nmap command that finds live hosts in 10.10.1.0/24 without scanning ports, then explain each flag." Always read the command before running it, and never paste in targets you are not allowed to scan.
-
-**Countermeasures and defense:** Firewall and IDS rules that detect and block probes (see 3.19).
+> **EXAM TIP:** "Identify hosts, ports, and services" is the definition. "Profile of the target organization" ties scanning to information gathering.
 
 **EXAM FOCUS:**
 
 - How it is asked: "Which of the following is an objective of network scanning?" or "Which tool is used for network scanning?"
-- Keywords: "identify hosts, ports, and services" -> network scanning. "Profile of the target organization" -> information gathering.
-- Look-alike: scanning vs enumeration. Scanning finds hosts, ports, and services. Enumeration (Module 04) extracts user names, shares, and other details from those services.
+- Keywords: live hosts, open ports, services, OS, architecture, vulnerabilities.
+- Common trap: Vulnerability discovery is the fourth objective, but the full vulnerability assessment is Module 05.
+- Look-alike: Scanning vs Enumeration. Scanning finds hosts, ports, and services. Enumeration (Module 04) pulls detailed data such as user names and shares from those services.
 
-**Memory trick:** Scanning finds "H-P-S-O-V": Hosts, Ports, Services, OS, Vulnerabilities.
+**Memory trick:** "Scanning finds H-P-S-O-V": Hosts, Ports, Services, OS, Vulnerabilities.
 
 ### 3.3 TCP Communication Flags
 
-**What it is (simple words):** TCP (Transmission Control Protocol) is the reliable, connection-based transport protocol of the internet. Standard TCP communications are controlled by flags in the TCP packet header. A flag is a single bit (0 or 1) that tells the receiver what the packet means.
+**What it is (simple words):** TCP is the transport protocol that gives reliable, ordered delivery (TCP = Transmission Control Protocol). Inside every TCP packet header there is a small set of one-bit switches called flags. The flags tell the receiver what the packet is for. The slide says: standard TCP communications are controlled by flags in the TCP packet header.
 
-**Analogy:** Flags are hand signals in a phone call. SYN is "hello, can we talk?", ACK is "I heard you", PSH is "say it now, do not wait", URG is "this part is urgent", FIN is "goodbye, I am finished", RST is "I hang up, this call is wrong".
+**Analogy:** Flags are the words used on a walkie-talkie. "Over" (ACK) means "I heard you". "Out" (FIN) means "I am finished". "Say again" (RST) means "forget it, start over". "Urgent" (URG) means "listen now". Scanners send strange word combinations to see how the other side replies.
 
 **The six flags on the slide:**
 
-| Flag | Full name | Meaning from the slide | Hex value | Easy picture |
-| --- | --- | --- | --- | --- |
-| URG | Urgent | Data in the packet is processed immediately | 0x20 | Priority lane |
-| ACK | Acknowledgement | Acknowledges receipt of a packet | 0x10 | "Got it" |
-| PSH | Push | Sends all buffered data immediately | 0x08 | Flush now |
-| RST | Reset | Resets a connection | 0x04 | Hang up |
-| SYN | Synchronize | Initiates a connection between hosts | 0x02 | "Hello" |
-| FIN | Finish | There will be no further transmissions | 0x01 | "Goodbye" |
+| Flag | Full name | Meaning (from the notes) | Seen in |
+| --- | --- | --- | --- |
+| URG | Urgent | Data in the packet should be processed immediately | Xmas scan |
+| ACK | Acknowledgement | Acknowledges receipt of a packet | Handshake, ACK scan |
+| PSH | Push | Sends all buffered data immediately | Xmas scan |
+| RST | Reset | Resets a connection | Closed-port reply |
+| SYN | Synchronize | Initiates a connection between hosts | Handshake, SYN scan |
+| FIN | Finish | There will be no further transmissions | Closing, FIN scan |
 
-The slide groups them as URG, FIN, RST in the top row and PSH, ACK, SYN in the bottom row. Header order is URG, ACK, PSH, RST, SYN, FIN.
-
-**ADDED CONTEXT:** The hex values are the bit positions inside the flags byte. Scanners combine them. Xmas = FIN + PSH + URG = 0x01 + 0x08 + 0x20 = 0x29. NULL = 0x00. Two more flags exist in modern TCP, CWR (0x80) and ECE (0x40), used for congestion control. The exam rarely asks about them.
-
-**The TCP header layout (from the slide):**
+**The TCP header on the slide.** Each row is 32 bits wide (bit 0 to bit 31).
 
 ```text
  0                              15 16                             31
- +--------------------------------+--------------------------------+
- |          Source Port           |        Destination Port        |
- +--------------------------------+--------------------------------+
- |                        Sequence Number                          |
- +-----------------------------------------------------------------+
- |                    Acknowledgement Number                       |
- +--------+-----+-----------------+--------------------------------+
- | Offset | Res |    TCP Flags    |             Window             |
- +--------+-----+-----------------+--------------------------------+
- |          TCP Checksum          |         Urgent Pointer         |
- +--------------------------------+--------------------------------+
- |                            Options                              |
- +-----------------------------------------------------------------+
++--------------------------------+--------------------------------+
+| Source Port                    | Destination Port               |
++--------------------------------+--------------------------------+
+| Sequence Number                                                 |
++-----------------------------------------------------------------+
+| Acknowledgement Number                                          |
++--------+-------+---------------+--------------------------------+
+| Offset | Res   | TCP Flags     | Window                         |
++--------+-------+---------------+--------------------------------+
+| TCP Checksum                   | Urgent Pointer                 |
++--------------------------------+--------------------------------+
+| Options                                                         |
++-----------------------------------------------------------------+
 ```
 
-| Field | Plain meaning | Why scanners care |
+| Field | Size | Job |
 | --- | --- | --- |
-| Source port, destination port | Sender's and receiver's door numbers | The port being probed |
-| Sequence number | Position of this data in the stream | Spoofing needs a guess of it |
-| Acknowledgement number | Next byte the receiver expects | Proves a reply is real |
-| Offset | Length of the TCP header | Fragment tricks split the header |
-| Res | Reserved bits | Normally zero |
-| TCP flags | The six flag bits | Defines the scan type |
-| Window | How much data the receiver accepts | Helps guess the OS (see 3.8) |
-| TCP checksum | Error check for the segment | Bad checksums reveal firewalls (see 3.18) |
-| Urgent pointer | Where urgent data ends | Used only with URG |
-| Options | Extra settings (for example MSS) | OS fingerprinting reads these |
+| Source Port | 16 bits | Port the sender uses |
+| Destination Port | 16 bits | Port the sender wants |
+| Sequence Number | 32 bits | Position of the first data byte |
+| Acknowledgement Number | 32 bits | Next byte the receiver expects |
+| Offset | 4 bits | Header length (where data starts) |
+| Res | 3 bits | Reserved for future use |
+| TCP Flags | 9 bits | Control switches (URG, ACK, ...) |
+| Window | 16 bits | How much data the receiver can accept |
+| TCP Checksum | 16 bits | Detects damaged packets |
+| Urgent Pointer | 16 bits | Where urgent data ends (used with URG) |
+| Options | Variable | Extras such as window scaling |
 
-Each row of the header is 32 bits wide (bit 0 to bit 31).
+The sizes come from the TCP standard, not the slide (ADDED CONTEXT). The minimum header is 20 bytes.
 
-**Real-world use:** A tester sends a packet with only the FIN flag to port 22. The target sends nothing back. Because the flag combination is unusual, a firewall that only blocks SYN packets may let it through. That is the idea behind FIN, NULL, and Xmas scans (3.6).
+**How the flags are used in scanning:** A scanner sets the flags in unusual ways and watches the reply. The rules of TCP say what a normal host should answer. Differences show which ports are open.
 
-**Tools and commands used here:** Wireshark and tcpdump (to read flags), Nmap and Hping3 (to set flags).
+| Pattern | Flags set | Used by |
+| --- | --- | --- |
+| Normal start | SYN | SYN (half-open) and connect scans |
+| FIN scan | FIN | nmap -sF |
+| NULL scan | none | nmap -sN |
+| Xmas scan | FIN + PSH + URG | nmap -sX |
+| ACK scan | ACK | nmap -sA and -sW |
+| Maimon scan | FIN + ACK | nmap -sM |
 
-**AI angle:** Paste a packet capture line into an LLM and ask: "Which TCP flags are set in this packet and what does it mean for the connection?" The model can decode flag letters quickly. Check its answer against the hex values above.
+> **ADDED CONTEXT:** Modern TCP has three more flag bits: NS, CWR, and ECE. They manage network congestion and rarely matter for scanning. The exam uses the six flags on the slide.
 
-**Countermeasures and defense:** A stateful firewall tracks connections and drops packets whose flags do not fit the connection state (for example ACK packets with no matching SYN). An IDS alerts on illegal flag combinations such as SYN+FIN or all flags set.
+**Real-world use:** An analyst reads a firewall log that shows packets with FIN, PSH, and URG all set. That pattern is not normal traffic. It is the signature of an Xmas scan.
+
+**Tools and commands used here:** Wireshark (shows flags in a packet), Nmap (sets flags), Hping3 (sets flags by hand: -S, -A, -F, -P, -U, -R).
+
+**Countermeasures and defense:** A stateful firewall drops packets whose flags do not fit a known connection. An IDS signature flags invalid flag combinations.
 
 **EXAM FOCUS:**
 
-- How it is asked: "Which flag resets a connection?" -> RST. "Which flag initiates a connection?" -> SYN. "Which flag sends buffered data immediately?" -> PSH.
-- Keywords: "no further transmissions" -> FIN. "Processed immediately" -> URG. "Acknowledges receipt" -> ACK.
-- Trap: FIN ends a connection politely after the data is sent. RST ends it abruptly and discards data. PSH is about speed of delivery, not about ending anything.
-- Look-alike: URG (priority data inside the stream) vs PSH (do not wait, deliver the buffer now).
+- How it is asked: "Which flag initiates a connection?" (SYN). "Which flag resets a connection?" (RST). "Which flags are set in an Xmas scan?" (FIN, PSH, URG).
+- Keywords: "no further transmissions" -> FIN. "Processed immediately" -> URG. "Buffered data" -> PSH. "Initiates a connection" -> SYN.
+- Common trap: PSH and URG both sound like "hurry". PSH sends buffered data now. URG marks data as high priority.
+- Look-alike: RST vs FIN. FIN closes politely. RST ends the connection at once, often because the port is closed.
 
-**Memory trick:** Header order "Unskilled Attackers Pester Real Security Folks" -> URG, ACK, PSH, RST, SYN, FIN.
+**Memory trick:** "Unskilled Attackers Pester Real Security Folks" -> URG, ACK, PSH, RST, SYN, FIN. For Xmas: the tree lights up with "FPU" (FIN, PSH, URG).
 
-### 3.4 TCP/IP Communication (Handshake and Termination)
+### 3.4 TCP/IP Communication: Handshake and Termination
 
-**What it is (simple words):** Before two hosts exchange data, TCP sets up a session with a three-way handshake. When they finish, TCP closes the session with a termination exchange. Port scanners study how a host answers these steps.
+**What it is (simple words):** Before two hosts exchange data over TCP, they agree to talk. This is the three-way handshake. When they are done, they close the session in a four-step termination. The slide shows both, with a client called Bill (10.0.0.2) and a server called Sheela (10.0.0.3). The slide labels both ends with port 21 (FTP). In real life the client uses a random high port (called an ephemeral port).
 
-- **Sequence number (SEQ):** a counter that numbers the bytes a host sends.
-- **Acknowledgement number (ACK#):** the next sequence number the receiver expects. It equals the received sequence number plus 1 for a SYN or FIN.
-- **Session:** the period between connection setup and teardown.
+**Analogy:** A phone call. Bill: "Hello Sheela, can you hear me?" (SYN). Sheela: "Yes, I hear you. Can you hear me?" (SYN/ACK). Bill: "Yes, I hear you too." (ACK). At the end each side says "I am done" (FIN) and the other says "OK" (ACK).
 
-**Analogy:** A phone call. "Hello, can you hear me?" (SYN). "Yes, I can hear you, can you hear me?" (SYN+ACK). "Yes, I can" (ACK). The call is open. At the end: "I am done talking" (FIN), "OK" (ACK), "I am done too" (FIN), "OK, bye" (ACK).
-
-**Session establishment (three-way handshake), example from the slide:** Client Bill (10.0.0.2:21) talks to server Sheela (10.0.0.3:21).
+**Three-way handshake (session establishment):**
 
 ```text
- Client Bill 10.0.0.2          Server Sheela 10.0.0.3
-     |                                              |
-     |--- 1 SYN  SEQ=10 --------------------------->|
-     |                                              |
-     |<-- 2 SYN+ACK  ACK=11  SEQ=142 ---------------|
-     |                                              |
-     |--- 3 ACK  ACK=143  SEQ=11 ------------------>|
+ Client (Bill)                                   Server (Sheela)
+ 10.0.0.2                                        10.0.0.3
+     |                                                |
+     |---- SYN, SEQ=10 ------------------------------>|
+     |<--- SYN+ACK, ACK=11, SEQ=142 ------------------|
+     |---- ACK, ACK=143, SEQ=11 --------------------->|
+     |                                                |
+     |============ connection open, data flows =======|
 ```
 
-What each packet says in plain words:
+1. Bill sends SYN with sequence number 10: "I would like to talk with you on port 21. Are you open?"
+2. Sheela sends SYN + ACK with ACK number 11 and her own sequence number 142: "OK, let's talk. I am open on port 21."
+3. Bill sends ACK with ACK number 143 and sequence number 11: "OK, thanks."
 
-1. SYN: "Can we talk on port 21? Are you open?"
-2. SYN+ACK: "OK, I am open on port 21, let us talk."
-3. ACK: "OK, thanks." The session is now open.
+**The number rule:** The ACK number is the other side's sequence number plus 1. Bill sent 10, so Sheela acknowledges 11. Sheela sent 142, so Bill acknowledges 143. A SYN or FIN uses up one sequence number even though it carries no data.
 
-How to read the numbers:
-
-1. Client sends SYN with SEQ 10.
-2. Server answers SYN+ACK. Its ACK is 11 (client SEQ 10 plus 1). Its own SEQ is 142.
-3. Client sends ACK. Its ACK is 143 (server SEQ 142 plus 1). Its SEQ is 11 (the next byte after its SYN).
-
-**Session termination, example from the slide:**
+**Termination (session close):**
 
 ```text
- Client Bill                    Server Sheela
-     |                                              |
-     |--- 1 FIN  SEQ=50 --------------------------->|
-     |                                              |
-     |<-- 2 ACK  ACK=51  SEQ=170 -------------------|
-     |                                              |
-     |<-- 3 FIN  SEQ=171 ---------------------------|
-     |                                              |
-     |--- 4 ACK  ACK=172  SEQ=51 ------------------>|
+ Client (Bill)                                   Server (Sheela)
+     |                                                |
+     |---- FIN, SEQ=50 ----------------------------->|
+     |<--- ACK, ACK=51, SEQ=170 ----------------------|
+     |<--- FIN, SEQ=171 ------------------------------|
+     |---- ACK, ACK=172, SEQ=51 -------------------->|
 ```
 
-What each packet says in plain words:
+1. Bill sends FIN, SEQ 50: "I am done with the data transfer."
+2. Sheela sends ACK, ACK 51, SEQ 170: "OK, I received your termination request."
+3. Sheela sends FIN, SEQ 171: "I have received all the data sent."
+4. Bill sends ACK, ACK 172, SEQ 51: "OK, thanks."
 
-1. FIN: "I am done with the data transfer."
-2. ACK: "OK, I received your termination request."
-3. FIN: "I have received all the data sent, I am done too."
-4. ACK: "OK, thanks." The session is closed.
+[UNCLEAR on page 2]: the numbers are small on the screenshot. The best reading is above. They follow the +1 rule, which supports this reading.
 
-The termination uses four packets: FIN, ACK, FIN, ACK.
+**Why this matters for scanning:** Scanners break or skip steps of this conversation and read the reply.
 
-**ADDED CONTEXT: reading the same handshake in tcpdump (illustrative).**
+| Target answer to a SYN | Meaning |
+| --- | --- |
+| SYN/ACK | Port is open |
+| RST (or RST/ACK) | Port is closed |
+| Nothing, or ICMP unreachable | Port is filtered (a firewall blocks it) |
 
-```text
-10.0.0.2.51514 > 10.0.0.3.21: Flags [S], seq 10, win 64240
-10.0.0.3.21 > 10.0.0.2.51514: Flags [S.], seq 142, ack 11, win 65535
-10.0.0.2.51514 > 10.0.0.3.21: Flags [.], ack 143
-```
+- Connect scan finishes all three steps, then closes.
+- SYN (half-open) scan stops after step 2 and sends RST.
+- FIN, NULL, and Xmas scans skip the handshake and send odd flags.
+- Idle scan and IP spoofing hide who started the handshake.
 
-tcpdump flag letters: S = SYN, . = ACK, F = FIN, R = RST, P = PSH, U = URG. So [S.] means SYN+ACK. Real captures show random starting sequence numbers (or relative numbers starting at 0). The client port on the slide is shown as 21 for simplicity; in real life the client uses a random high port (an ephemeral port such as 51514).
+**Real-world use:** A tester sees in Wireshark that her scan sends SYN and receives SYN/ACK, then her machine sends RST. This confirms the half-open behavior and explains why some applications never log the visit.
 
-**What this means for scanning:**
+**Tools and commands used here:** Wireshark (watch the exchange), Nmap -sT and -sS (the two ways of using the handshake), Hping3 -S (send a single SYN).
 
-| Probe sent | Reply | Meaning |
-| --- | --- | --- |
-| SYN | SYN+ACK | Port is open |
-| SYN | RST (or RST+ACK) | Port is closed |
-| SYN | Nothing or ICMP unreachable | Port is filtered |
-| Connect scan after SYN+ACK | ACK, then RST | Full connection made, then closed |
-| SYN scan after SYN+ACK | RST only | Half-open, connection never completes |
+**Countermeasures and defense:** SYN cookies and rate limits against SYN floods; stateful firewalls that track the handshake; IDS rules for many half-open connections.
 
-**Real-world use:** A tester looks at a Wireshark capture. The server sends SYN+ACK but the client answers RST instead of ACK. That pattern is a SYN (half-open) scan, because the scanner never finishes the handshake.
+> **EXAM TIP:** If a question gives you the sequence number of a packet, the reply's ACK number is that number plus 1.
 
-**Tools and commands used here:** Wireshark, tcpdump, Nmap (-sT and -sS).
-
-**AI angle:** Ask an LLM: "Explain this three-packet capture and tell me whether it is a full connect scan or a half-open scan." Use the table above to check the answer.
-
-**Countermeasures and defense:** Use SYN cookies and connection limits to protect against half-open floods (ADDED CONTEXT). Log failed connections and alert on many SYNs from one source.
+> **TRAP:** The second packet is SYN + ACK (both flags in one packet), not two separate packets.
 
 **EXAM FOCUS:**
 
-- How it is asked: "In the three-way handshake, what does the server send after receiving SYN?" -> SYN+ACK. "What is the ACK number if the client SEQ is 10?" -> 11.
-- Keywords: "half-open" -> the third step (ACK) is never sent. "Full open" or "connect" -> all three steps are completed.
-- Trap: the termination is four steps, not three.
-- Look-alike: FIN ends politely with ACKs on both sides. RST ends at once with no reply needed.
+- How it is asked: "What is the third step of the TCP handshake?" (ACK). "What does the server send in reply to SYN?" (SYN/ACK). "A closed port answers a SYN with what?" (RST).
+- Keywords: "three-way", "SYN, SYN/ACK, ACK", "four-way termination", "FIN".
+- Common trap: Termination takes four steps (FIN, ACK, FIN, ACK). The handshake takes three.
+- Look-alike: RST vs FIN termination. RST is abrupt. FIN is graceful.
 
-**Memory trick:** Start: "SYN, SYN-ACK, ACK" -> "Sally Sends Alice A kiss". End: "FIN, ACK, FIN, ACK".
+**Memory trick:** Start: "SYN, SYN-ACK, ACK" = "Sally Says Aloud: hi, hi-back, OK". End: "FIN, ACK, FIN, ACK" = "Finish, Acknowledge, Finish, Acknowledge".
 
 ### 3.5 Host Discovery Techniques
 
-**What it is (simple words):** Host discovery techniques are used to identify the active (live) systems in the network. The scanner sends a probe to every IP address in a range. Any valid answer proves that a host is alive at that address. This step is often called a ping scan, but it goes beyond the classic ICMP ping.
+**What it is (simple words):** Host discovery finds the active (live) systems in a network. It answers one question: "Which IP addresses have a machine that is switched on and reachable?" This happens before port scanning, because there is no point scanning ports on a dead address. It is also called a ping scan or network sweep.
 
-- **ICMP (Internet Control Message Protocol):** a network-layer protocol that carries control and error messages. Ping uses it.
-- **ARP (Address Resolution Protocol):** a local-network protocol that asks "who has this IP address?" and learns the MAC address of the answer.
-- **MAC address:** the hardware address of a network card.
-- **Ping sweep:** a ping sent to every address in a range, one after the other.
+**Analogy:** You shout "Is anyone there?" down a long corridor of rooms. Rooms that answer are occupied. Different ways of shouting (a knock, a phone call, a note under the door) work on different rooms, because some rooms ignore some shouts.
 
-**Analogy:** Walking along a street and ringing every doorbell to learn which houses have someone at home. You do not try the doors yet. You only make a list of the occupied houses.
-
-**How it works (numbered steps):**
-
-1. Choose a target range, for example 10.10.1.0/24 (256 addresses).
-2. Pick the probe type: ICMP, ARP, UDP, TCP SYN, TCP ACK, or IP protocol.
-3. Send one probe to each address.
-4. Mark every address that answers as live.
-5. Pass only the live addresses to the next step, port scanning (3.6).
-
-**Host discovery techniques on the slide:**
+**The technique tree on the slide:**
 
 ```text
 HOST DISCOVERY TECHNIQUES
-|
-+-- ICMP Ping Scan
-|   +-- ICMP ECHO Ping            nmap -sn -PE TARGET
-|   +-- ICMP Timestamp Ping       nmap -sn -PP TARGET
-|   +-- ICMP Address Mask Ping    nmap -sn -PM TARGET
-|   +-- ICMP ECHO Ping Sweep      nmap -sn -PE RANGE
-+-- ARP Ping Scan                 nmap -sn -PR TARGET
-+-- UDP Ping Scan                 nmap -sn -PU TARGET
-+-- TCP Ping Scan
-|   +-- TCP SYN Ping              nmap -sn -PS TARGET
-|   +-- TCP ACK Ping              nmap -sn -PA TARGET
-+-- IP Protocol Ping Scan         nmap -sn -PO TARGET
+ |
+ +-- ICMP Ping Scan
+ |     +-- ICMP ECHO Ping ........ nmap -sn -PE TARGET
+ |     +-- ICMP Timestamp Ping ... nmap -sn -PP TARGET
+ |     +-- ICMP Address Mask Ping  nmap -sn -PM TARGET
+ |     +-- ICMP ECHO Ping Sweep .. nmap -sn -PE IP-RANGE
+ +-- ARP Ping Scan ............. nmap -sn -PR TARGET
+ +-- UDP Ping Scan ............. nmap -sn -PU TARGET
+ +-- TCP Ping Scan
+ |     +-- TCP SYN Ping ........ nmap -sn -PS TARGET
+ |     +-- TCP ACK Ping ........ nmap -sn -PA TARGET
+ +-- IP Protocol Ping Scan ..... nmap -sn -PO TARGET
 ```
 
-**The techniques explained:**
+**How it works (numbered steps):**
 
-| Technique | Flag | Probe sent | Host is alive if... | Best use |
-| --- | --- | --- | --- | --- |
-| ICMP echo ping | -PE | ICMP type 8 | ICMP type 0 reply | Simple internal checks |
-| ICMP timestamp ping | -PP | ICMP type 13 | ICMP type 14 reply | Echo blocked, others open |
-| ICMP address mask ping | -PM | ICMP type 17 | ICMP type 18 reply | Echo blocked, others open |
-| ICMP echo ping sweep | -PE range | Type 8 to many IPs | Replies from many IPs | Map a whole subnet |
-| ARP ping | -PR | ARP request | ARP reply | Local LAN, most reliable |
-| UDP ping | -PU | UDP datagram | ICMP port unreachable or UDP reply | Where TCP and ICMP are blocked |
-| TCP SYN ping | -PS | TCP SYN | SYN/ACK or RST | Firewall blocks ICMP |
-| TCP ACK ping | -PA | TCP ACK | RST | Firewall blocks SYN |
-| IP protocol ping | -PO | IP packets with set protocol numbers | Reply or ICMP protocol unreachable | Unusual filters |
+1. The attacker picks a target IP, a range, or a subnet.
+2. Nmap sends one or more probe packets of the chosen type to each address.
+3. A live host answers (any answer counts, even an error) or its presence is revealed by a reply.
+4. Nmap marks the address "Host is up" and prints its latency (and its MAC address if the host is on the same LAN).
+5. Addresses with no answer are marked down and skipped in later port scans.
 
-#### ICMP ping scans (echo, timestamp, address mask)
+**The core switches:**
 
-An ICMP echo request (type 8) asks "are you there?". A live host answers with an echo reply (type 0). Many firewalls block echo, so Nmap also offers two older ICMP queries: timestamp (request type 13, reply type 14) and address mask (request type 17, reply type 18). Administrators who block echo often forget these two. A ping sweep is the same echo ping sent to every address in a range.
-
-**ADDED CONTEXT: the ICMP types the exam likes.**
-
-| Type | Name | Used for |
+| Switch | Meaning | Notes |
 | --- | --- | --- |
-| 0 | Echo reply | Answer to ping |
-| 3 | Destination unreachable | Closed UDP port (code 3), blocked traffic |
-| 8 | Echo request | Ping |
-| 11 | Time exceeded | Traceroute (TTL reached 0) |
-| 13 / 14 | Timestamp request / reply | -PP host discovery |
-| 17 / 18 | Address mask request / reply | -PM host discovery |
+| -sn | Ping scan: discover hosts, no port scan | Older name: -sP |
+| -Pn | Skip discovery: treat every host as up | Older name: -PN. Use when ICMP is blocked |
+| -n | Never do DNS lookups | Faster, quieter |
+| -P* probes | Choose the probe type (see below) | Used with -sn |
 
-#### ARP ping scan
+> **ADDED CONTEXT:** If you give -sn and no probe switch, Nmap picks defaults (verify for your version). On a local Ethernet LAN as root, it uses ARP. Against remote targets it sends an ICMP echo request, a TCP SYN to port 443, a TCP ACK to port 80, and an ICMP timestamp request. On a LAN, Nmap keeps using ARP even when you ask for other -P probes, unless you add --send-ip.
 
-On the same local network, hosts must answer ARP or they cannot talk to anyone. A host firewall rarely blocks ARP. So the ARP ping (-PR) is the most reliable discovery method on a LAN. It works only on the local subnet because ARP does not cross routers. **ADDED CONTEXT:** Nmap uses ARP automatically for local targets, even if you pick another ping type (use --disable-arp-ping to stop that).
+> **TRAP:** -sn means "no port scan". It does not mean "stealth", and it is not -sS. -Pn is the opposite idea: skip the ping and go straight to port scanning.
 
-#### UDP ping scan
+**Real-world use:** A tester has the range 10.10.1.0/24. A full port scan of 254 addresses would take a long time. She runs a ping sweep first, finds 11 live hosts, and scans only those.
 
-Nmap sends a UDP datagram to a port that is probably closed. A live host answers with an ICMP port unreachable message (type 3, code 3). That answer proves the host is up. **ADDED CONTEXT:** the default port is 40125 (verify).
+**Tools and commands used here:** Nmap, Zenmap, and the ping sweep tools in 3.5.7 (Angry IP Scanner, SolarWinds Engineer's Toolset, NetScanTools Pro, Colasoft Ping Tool, Advanced IP Scanner, OpUtils).
 
-#### TCP ping scans (SYN and ACK)
+**AI angle (ADDED CONTEXT):** An AI assistant turns plain English into the right switch. Example prompt: "Write an Nmap command that checks if 10.10.1.0/24 hosts are alive using ARP only, no DNS lookups." Answer: nmap -sn -PR -n 10.10.1.0/24. The tester still reads the command before running it.
 
-- **TCP SYN ping (-PS):** sends a SYN. Both SYN/ACK (port open) and RST (port closed) prove the host is alive. Default port 80 (ADDED CONTEXT).
-- **TCP ACK ping (-PA):** sends an ACK that belongs to no connection. A live host answers RST. This can pass stateless firewalls that block SYN packets. Default port 80 (ADDED CONTEXT).
+**Countermeasures and defense:** Block inbound ICMP echo at the edge. Use a host firewall. Use IDS rules that alert on one source pinging many addresses. Note that an internal LAN cannot hide from ARP.
 
-#### IP protocol ping scan
+**Memory trick for the -P letters:** "Every Pirate Must Rob Under Starry Ancient Oceans" -> PE Echo, PP timestamP, PM Mask, PR aRp, PU Udp, PS Syn, PA Ack, PO prOtocol.
 
-The probe is an IP packet that carries a chosen protocol number (for example 1 = ICMP, 2 = IGMP, 4 = IP-in-IP). The host is alive if it answers with the same protocol or with an ICMP "protocol unreachable" message. **ADDED CONTEXT:** the defaults are protocols 1, 2, and 4.
+#### 3.5.1 ICMP Ping Scan (Echo, Timestamp, Address Mask, Sweep)
 
-> **TRAP:** -sn does not mean "SYN". It means "ping scan, skip the port scan". The SYN ping is -PS and the SYN port scan is -sS. Do not mix them up.
+**What it is:** ICMP (Internet Control Message Protocol) is the network "error and test" protocol. The ping command uses it. An ICMP ping scan sends ICMP request messages and waits for replies. The slide lists three request types and the sweep.
 
-**ADDED CONTEXT: two related options.** -Pn means "do not ping, assume every host is up". Use it when firewalls block pings and live hosts look dead. It is slow on large ranges. -sL (list scan) only prints the targets and resolves names without sending any probe. If you give no discovery option and run as root, Nmap sends an ICMP echo, a TCP SYN to port 443, a TCP ACK to port 80, and an ICMP timestamp (the same as -PE -PS443 -PA80 -PP).
+| Probe | Switch | ICMP type sent | Reply type |
+| --- | --- | --- | --- |
+| ICMP ECHO Ping | -sn -PE | 8 (echo request) | 0 (echo reply) |
+| ICMP Timestamp Ping | -sn -PP | 13 (timestamp request) | 14 (timestamp reply) |
+| ICMP Address Mask Ping | -sn -PM | 17 (mask request) | 18 (mask reply) |
+| ICMP ECHO Ping Sweep | -sn -PE with a range | 8 | 0 |
 
-**Ping sweep tools on the slide:** Angry IP Scanner, SolarWinds Engineer's Toolset, NetScanTools Pro, Colasoft Ping Tool, Advanced IP Scanner, OpUtils. See section 4 for what each tool does.
+The ICMP type numbers are ADDED CONTEXT (verify against RFC 792).
 
-**Screenshots on the slide:** two terminal captures on Parrot OS. The first, "TCP SYN Ping Scan", runs a SYN ping against 10.10.1.11. The second, "ICMP ECHO Ping Sweep", runs an echo ping across several addresses. The exact command lines are small [UNCLEAR on page 2]. The best readings are shown below.
+**Analogy:** Echo ping is "Can you hear me?". Timestamp ping is "What time is it on your clock?". Address mask ping is "What is your subnet mask?". A host that answers any of them is alive.
 
-**Sample output 1 - single host (best reading of the TCP SYN ping capture):**
+**How it works:**
+
+1. Nmap sends the ICMP request to the target.
+2. If the host is alive and allows the message, it sends the matching reply.
+3. Nmap prints "Host is up".
+
+**Why use timestamp or address mask:** Many firewalls block ICMP echo (type 8) but forget the other types. The attacker tries -PP or -PM to find hosts that the echo ping missed. Many modern hosts ignore the address mask request, so -PM works less often (ADDED CONTEXT).
+
+**ICMP echo ping sweep:** A ping sweep sends echo requests to a whole range of addresses. The slide shows "nmap -sn -PE" with an IP range, and a screenshot where several hosts answer. Each live host shows "Host is up" and its MAC address.
+
+**Real-world use:** An attacker pings a company range and finds the web server answers echo. The firewall blocks echo to the database server, but the same server answers timestamp requests. The attacker adds it to the list.
+
+**Countermeasures:** Filter ICMP types 8, 13, and 17 inbound at the firewall. Allow only the ICMP your network needs. Alert on one host sending ICMP to many addresses.
+
+> **EXAM TIP:** "Which scan sends ICMP type 8?" -> echo (-PE). "Find hosts when echo is blocked" -> timestamp (-PP) or address mask (-PM).
+
+**EXAM FOCUS:** Keywords: "ping sweep", "range of IP addresses", "ICMP ECHO". Trap: a ping sweep tells you only that a host is alive, not which ports are open. Look-alike: -PE (ping) vs -sS (port scan).
+
+**Memory trick:** "Echo, Time, Mask" = E, P (timestamP), M.
+
+#### 3.5.2 ARP Ping Scan
+
+**What it is:** ARP (Address Resolution Protocol) finds the MAC address (hardware address) that belongs to an IP address on a local network. An ARP ping scan sends ARP requests ("Who has 10.10.1.11? Tell me your MAC.") and treats any reply as proof that the host is alive. Switch: nmap -sn -PR.
+
+**Analogy:** In a school hall you shout a name: "Who is Priya?" Only Priya answers. She cannot pretend she did not hear, because the hall is one room.
+
+**How it works:**
+
+1. The scanner broadcasts an ARP request on the local network for each target IP.
+2. A live host replies with its MAC address.
+3. Nmap marks the host up and prints the MAC address and the hardware vendor (for example "Microsoft").
+
+**Key facts:**
+
+- ARP works only on the same local network (same subnet, Layer 2). It cannot cross a router.
+- A host firewall that blocks ICMP or TCP usually still answers ARP, because the host needs ARP to communicate. So it is the most reliable discovery on a LAN.
+- It is fast, and it is hard to block.
+
+**Real-world use:** An insider with a laptop plugged into the office switch runs an ARP ping sweep on the local subnet. Every device shows up, even those that ignore ping.
+
+**Tools:** Nmap -PR, arp-scan and Netdiscover (ADDED CONTEXT).
+
+**Countermeasures:** Network segmentation (VLANs), port security on switches, and monitoring for ARP storms and ARP spoofing (Module 08).
+
+**EXAM FOCUS:** Keywords: "same subnet", "local network", "MAC address", "cannot be blocked by a host firewall". Trap: ARP scans do not work across the internet or across routers. Look-alike: ARP ping (-PR, discovery) vs ARP poisoning (an attack in Module 08).
+
+**Memory trick:** "ARP = Address Resolution = Right here on the LAN".
+
+#### 3.5.3 UDP Ping Scan
+
+**What it is:** A UDP ping scan sends a UDP packet to a port on the target. UDP (User Datagram Protocol) is a connectionless transport protocol with no handshake. Switch: nmap -sn -PU.
+
+**Analogy:** You drop a postcard in a mailbox. If nobody lives at the address and the building is empty, the postal service returns a "no such address" notice. That notice proves the building exists.
+
+**How it works:**
+
+1. Nmap sends an empty UDP packet to a port that is probably closed (the default is 40125, ADDED CONTEXT, verify).
+2. A live host with the port closed sends back an ICMP "port unreachable" message (type 3, code 3).
+3. That reply proves the host is alive.
+4. If the host drops UDP or ICMP at a firewall, no reply comes and the host looks down.
+
+**Real-world use:** TCP and ICMP are blocked at a firewall, but UDP packets pass. The attacker uses -PU to find hosts.
+
+**Countermeasures:** Drop unneeded UDP at the edge. Block outbound ICMP type 3 (this is also on the countermeasure slide in 3.29).
+
+**EXAM FOCUS:** Keywords: "UDP", "ICMP port unreachable". Trap: A UDP port that is open may not reply at all, so a UDP ping targets a closed port on purpose. Look-alike: -PU (host discovery) vs -sU (UDP port scan).
+
+**Memory trick:** "U for UDP: Unreachable message comes back."
+
+#### 3.5.4 TCP Ping Scan (SYN Ping and ACK Ping)
+
+**What it is:** A TCP ping scan uses TCP packets instead of ICMP to test if a host is alive. The slide shows two kinds.
+
+| Kind | Switch | Packet sent | A live host answers with |
+| --- | --- | --- | --- |
+| TCP SYN Ping | -sn -PS | SYN (default port 80) | SYN/ACK (open) or RST (closed) |
+| TCP ACK Ping | -sn -PA | ACK (default port 80) | RST |
+
+**Analogy:** SYN ping is knocking on the door to start a conversation. Even if the person says "no, go away" (RST), you know someone is home. ACK ping is saying "Thanks for your message" to someone who never sent one. A confused person replies "I did not send you anything" (RST). Again, someone is home.
+
+**How it works (SYN ping):**
+
+1. Nmap sends an empty SYN to port 80 (or the ports you list, for example -PS22,80,443).
+2. Open port: the host replies SYN/ACK. Closed port: the host replies RST.
+3. Either reply shows the host is alive.
+4. Nmap does not complete the handshake.
+
+**How it works (ACK ping):**
+
+1. Nmap sends a bare ACK packet.
+2. A live host that has no matching connection replies RST.
+3. Any RST proves life.
+4. Stateless packet filters often let ACK packets through because they look like part of an existing conversation. A stateful firewall drops them.
+
+**Real-world use:** A firewall drops ICMP but allows web traffic to port 80. The tester uses -PS80 and finds the live web servers. When SYN is blocked by a simple filter, -PA gets through.
+
+**Reading the TCP SYN ping screenshot (page 2):** The sample shows "nmap -sn -PS" against one target, the line "Host is up (0.00078s latency)", a MAC address line with the vendor "Microsoft", and the summary "1 IP address (1 host up) scanned in 0.13 seconds". [UNCLEAR on page 2]: the exact date, latency, and scan time are small. A normal output of this kind looks like this:
 
 ```text
-$ sudo nmap -sn -PS 10.10.1.11
 Starting Nmap 7.94 ( https://nmap.org ) at 2024-03-04 03:43 EST
 Nmap scan report for 10.10.1.11
-Host is up (0.00073s latency).
+Host is up (0.00078s latency).
 MAC Address: 00:15:5D:01:80:00 (Microsoft)
 Nmap done: 1 IP address (1 host up) scanned in 0.13 seconds
 ```
 
-Line by line:
+Line by line: line 1 is the Nmap version and the time. Line 2 names the target. Line 3 says it answered and how fast. Line 4 is the MAC address and the vendor from the first three bytes (the OUI). Line 5 is the summary. No port list appears, because -sn disables the port scan.
 
-- Line 1: the command. sudo is needed because ping probes use raw packets.
-- Line 2: Nmap version and start time.
-- Line 3: the host that answered.
-- Line 4: "Host is up" is the result. The number is the round-trip delay.
-- Line 5: the MAC address was learned through ARP, so the target is on the same LAN. The prefix 00:15:5D belongs to Microsoft (it is used by Hyper-V virtual adapters, verify).
-- Line 6: summary. "1 host up" is the count of live hosts.
+**Countermeasures:** Use a stateful firewall. Drop unsolicited ACK packets. Log many SYN probes from one source.
 
-**Sample output 2 - ping sweep (illustrative):**
+**EXAM FOCUS:** Keywords: "ICMP is blocked", "half-open", "port 80". Trap: A RST reply does not mean the target is dead. RST means a host is alive and the port is closed. Look-alike: -PS (ping) vs -sS (port scan).
 
-```text
-$ sudo nmap -sn -PE 10.10.1.0/24
-Nmap scan report for 10.10.1.1
-Host is up (0.00061s latency).
-MAC Address: 00:15:5D:01:80:10 (Microsoft)
-Nmap scan report for 10.10.1.11
-Host is up (0.00073s latency).
-MAC Address: 00:15:5D:01:80:00 (Microsoft)
-Nmap done: 256 IP addresses (2 hosts up) scanned in 2.15 seconds
-```
+**Memory trick:** "PS = Please Syn, PA = Please Ack". A reply of RST still means "I am here".
 
-The summary line shows how many addresses were scanned (256) and how many answered (2). No port information appears, because -sn stops after discovery.
+#### 3.5.5 IP Protocol Ping Scan
 
-**Real-world use:** A tester receives the range 10.10.1.0/24. A plain ICMP sweep finds only 2 hosts because the firewall drops echo requests. She repeats with -PS443 and -PA80 and finds 9 more. Result: a complete target list for port scanning.
+**What it is:** An IP protocol ping scan sends raw IP packets with different protocol numbers in the IP header and watches for any reply. Switch: nmap -sn -PO. Protocol numbers are the values in the IP header that say what rides inside (1 = ICMP, 2 = IGMP, 6 = TCP, 17 = UDP, 4 = IP-in-IP).
 
-**Tools and commands used here:** Nmap (-sn, -PE, -PP, -PM, -PR, -PU, -PS, -PA, -PO, -Pn), Zenmap, Angry IP Scanner, NetScanTools Pro, and the other ping sweep tools.
+**Analogy:** You try several types of envelope at one address: a letter, a parcel, a telegram. If the address answers any of them, or the postal service says "we do not take that type here", you know the address exists.
 
-**AI angle (ADDED CONTEXT):** An attacker can ask an LLM to pick the probe type from the symptoms. Example prompt: "ICMP echo is blocked on 10.10.1.0/24. Give me an Nmap command that finds live hosts using TCP SYN to ports 80 and 443 and saves the live IPs to live.txt." A typical answer is sudo nmap -sn -PS80,443 10.10.1.0/24 -oG - followed by a filter. Read it before you run it.
+**How it works:**
 
-**Countermeasures and defense:**
+1. By default Nmap sends packets for protocols 1 (ICMP), 2 (IGMP), and 4 (IP-in-IP). You can choose others, for example -PO1,6,17 (ADDED CONTEXT, verify defaults).
+2. A live host answers in some way, or an ICMP "protocol unreachable" message returns.
+3. Any answer marks the host up.
 
-- Block inbound ICMP echo, timestamp, and address mask requests at the perimeter (see 3.19).
-- Do not rely on ICMP blocking alone, because TCP, UDP, and ARP pings still work.
-- Use an IDS to alert on many probes to sequential addresses.
-- Keep hosts behind a stateful firewall that drops unsolicited ACK and SYN probes.
+**Real-world use:** A firewall blocks the common ping types. The attacker tries protocol-level probes that the rule set does not cover.
 
-**EXAM FOCUS:**
+**Countermeasures:** Block IP protocols the network does not use. Use a default-deny firewall policy.
 
-- How it is asked: "Which Nmap option performs an ICMP timestamp ping?" -> -PP. "Which option performs an ARP ping scan?" -> -PR. "Which option disables port scanning after host discovery?" -> -sn.
-- Keywords: "address mask" -> -PM. "Protocol number" -> -PO. "Local subnet, most reliable" -> ARP. "Firewall blocks ICMP" -> TCP SYN or ACK ping.
-- Trap: a "ping sweep" is ICMP echo to a range (-PE with a range). It is not the same as -sn alone. -sn is the "no port scan" switch and can be used with any ping type.
-- Look-alike: -PS (SYN ping, host discovery) vs -sS (SYN scan, port scanning). -PU (UDP ping) vs -sU (UDP port scan). -Pn (skip discovery) vs -sn (discovery only).
+**EXAM FOCUS:** Keywords: "IP protocol numbers", "-PO". Look-alike: -PO (capital letter O, protocol) vs -P0 (zero, an old way to write skip discovery). Use the letter O for protocol ping.
 
-**Memory trick:** The P-flags in order: "Every Pinger Must Run Under Spotlights And Operate" -> -PE echo, -PP timestamp, -PM mask, -PR ARP, -PU UDP, -PS SYN, -PA ACK, -PO protocol.
+**Memory trick:** "PO = Protocol Ping, O for prOtocol".
 
-### 3.6 Port Scanning Techniques
+#### 3.5.6 Quick Comparison of Host Discovery Methods
 
-**What it is (simple words):** Port scanning finds out which ports on a live host are open, closed, or filtered. The slide groups the techniques by the type of protocol used for communication: TCP, UDP, SCTP, SSDP, and IPv6. The goal is a list of open ports, because every open port is a running service that may have a weakness.
+| Method | Switch | Layer / protocol | Best when |
+| --- | --- | --- | --- |
+| ICMP echo | -PE | Network / ICMP | Ping is allowed |
+| ICMP timestamp | -PP | Network / ICMP | Echo is blocked |
+| ICMP address mask | -PM | Network / ICMP | Echo is blocked |
+| ARP | -PR | Data link / ARP | Same LAN |
+| UDP | -PU | Transport / UDP | TCP and ICMP blocked |
+| TCP SYN | -PS | Transport / TCP | Web ports are open |
+| TCP ACK | -PA | Transport / TCP | SYN is filtered |
+| IP protocol | -PO | Network / IP | Other probes fail |
 
-- **Open port:** a service is listening and accepts connections.
-- **Closed port:** the host is reachable, but nothing listens on that port.
-- **Filtered port:** a firewall or filter blocks the probe, so the scanner cannot tell if the port is open.
-- **Stealth scan:** a scan that avoids completing a full TCP connection, so the target application does not log it.
+#### 3.5.7 Ping Sweep Tools
 
-**Analogy:** You have a list of occupied houses (host discovery). Now you walk to each house and test every door and window. An open door lets you in. A closed door says "nobody is here for this service". A door behind a guard who ignores you is filtered.
+**What it is:** A ping sweep tool pings a range of addresses and lists the live ones, usually with a graphic screen. The slide lists six.
 
-**How it works (numbered steps):**
-
-1. Take the live hosts from host discovery.
-2. Choose a scan type (connect, SYN, Xmas, ACK, UDP, and so on).
-3. Send probe packets to each port in a list (Nmap scans the 1000 most common ports by default).
-4. Read the reply for each port. The reply, or the lack of one, gives the port state.
-5. Report open ports with the service name Nmap expects on that port.
-
-**ADDED CONTEXT: the six port states in Nmap.**
-
-| State | Meaning | Typical cause |
+| Tool | What it does (simple) | Platform |
 | --- | --- | --- |
-| open | A service accepts connections | Service running |
-| closed | Reachable, nothing listening | Host answers RST |
-| filtered | Probe blocked, state unknown | Firewall drops or rejects |
-| unfiltered | Reachable, open or closed unknown | ACK scan result only |
-| open or filtered | No reply, cannot decide | UDP, FIN, NULL, Xmas, SCTP cookie |
-| closed or filtered | Cannot decide | Idle scan only (rare) |
+| Angry IP Scanner | Fast, free IP and port scanner with simple GUI | Windows, Linux, macOS |
+| SolarWinds Engineer's Toolset | Commercial set of network tools including a ping sweep | Windows |
+| NetScanTools Pro | Commercial toolkit: ping, port scan, packet tools | Windows |
+| Colasoft Ping Tool | Pings many hosts at once and shows results | Windows |
+| Advanced IP Scanner | Free LAN scanner; finds hosts and shared folders | Windows |
+| OpUtils | ManageEngine toolset for IP and switch port management | Windows, Linux |
 
-**ADDED CONTEXT: port ranges.** Well-known ports are 0 to 1023 (system services). Registered ports are 1024 to 49151. Dynamic or private ports are 49152 to 65535. There are 65536 ports (0 to 65535) per protocol (TCP and UDP are separate).
+**Real-world use:** A junior admin uses Advanced IP Scanner to list all devices on a branch office network. An attacker uses the same tool after getting onto the Wi-Fi.
 
-**The technique tree from the slide:**
+> **ADDED CONTEXT:** Alternatives the exam may place next to these: fping (command-line ping sweep), Nmap -sn, Masscan (very fast port scanner), and Zmap (internet-wide scanner).
+
+**EXAM FOCUS:** Keywords: "ping sweep tool", "GUI". Trap: Nmap is the answer for command-line scanning, but the slide's "Ping Sweep Tools" list does not include Nmap. If the list is shown, pick from it.
+
+**Memory trick:** "A Smart Network Can Always Observe" -> Angry IP, SolarWinds, NetScanTools, Colasoft, Advanced IP, OpUtils.
+
+### 3.6 Port Scanning Techniques (Overview and Tree)
+
+**What it is (simple words):** Port scanning finds which ports on a live host are open, closed, or filtered. The slide says the techniques are categorized according to the type of protocol used for communication. So the first split is by protocol: TCP, UDP, SCTP, SSDP, and IPv6.
+
+**Analogy:** A hotel has 65,535 room doors. You walk the corridor and try each handle. Some doors open (open port), some are locked with nobody inside (closed), and some have a guard who gives no answer at all (filtered).
+
+**The tree on the slide:**
 
 ```text
 PORT AND SERVICE DISCOVERY TECHNIQUES
-|
-+-- TCP Scanning
-|   +-- Open TCP scanning methods
-|   |   +-- TCP Connect / Full Open Scan   nmap -sT -v
-|   +-- Stealth TCP scanning methods
-|   |   +-- Half-open Scan                 nmap -sS -v
-|   |   +-- Inverse TCP Flag Scan          nmap -sF -sN -sX -v
-|   |   |   +-- Xmas Scan                  nmap -sX -v
-|   |   |   +-- FIN Scan                   nmap -sF -v
-|   |   |   +-- NULL Scan                  nmap -sN -v
-|   |   |   +-- Maimon Scan                nmap -sM -v
-|   |   +-- ACK Flag Probe Scan            nmap -sA -v
-|   |       +-- TTL-based Scan             nmap -sA --ttl 100 -v
-|   |       +-- Window Scan                nmap -sW -v
-|   +-- Third party and spoofed methods
-|       +-- IDLE / IPID Header Scan        nmap -Pn -p- -sI ZOMBIE TARGET
-+-- UDP Scanning                           nmap -sU -v
-+-- SCTP Scanning
-|   +-- SCTP INIT Scanning                 nmap -sY -v
-|   +-- SCTP COOKIE ECHO Scanning          nmap -sZ -v
-+-- SSDP Scanning
-+-- IPv6 Scanning                          nmap -6 TARGET
+ |
+ +-- TCP Scanning
+ |     +-- Open TCP Scanning Methods
+ |     |     +-- TCP Connect / Full Open Scan ... -sT
+ |     +-- Stealth TCP Scanning Methods
+ |     |     +-- Half-open Scan ................. -sS
+ |     |     +-- Inverse TCP Flag Scan
+ |     |     |     +-- Xmas -sX, FIN -sF, NULL -sN, Maimon -sM
+ |     |     +-- ACK Flag Probe Scan ............ -sA
+ |     |           +-- TTL-based Scan, Window Scan
+ |     +-- Third Party and Spoofed TCP Scanning
+ |           +-- IDLE / IPID Header Scan ........ -sI
+ +-- UDP Scanning .............................. -sU
+ +-- SCTP Scanning: INIT -sY, COOKIE ECHO -sZ
+ +-- SSDP Scanning
+ +-- IPv6 Scanning ............................. -6
 ```
 
-[UNCLEAR on page 3]: the thin connector lines make the exact parent of Maimon, TTL-based, and Window scans hard to see. The grouping above is the best reading and matches the usual EC-Council layout. The slide prints the TTL-based command as -sA -ttl 100 and the window scan as -sA -sW; the real Nmap options are --ttl and -sW (verify against your version).
+**The six port states Nmap reports:**
 
-**Summary of what each scan sends and gets back (TCP and others):**
+| State | Meaning | Typical cause |
+| --- | --- | --- |
+| open | A program accepts connections here | A service is running |
+| closed | Reachable, but nothing listens | Host answered with RST |
+| filtered | Nmap cannot tell; probes are blocked | Firewall drops packets |
+| unfiltered | Reachable, but open or closed is unknown | Result of an ACK scan |
+| open or filtered | No reply, so cannot tell | UDP, FIN, NULL, Xmas scans |
+| closed or filtered | Cannot tell (idle scan only) | Rare |
 
-| Scan | Flag | Probe sent | Open port reply | Closed port reply |
+In Nmap's own output the combined states are written with a vertical bar (open|filtered). Tables here use words so the table stays valid.
+
+**Port number ranges (ADDED CONTEXT):** Well-known ports 0 to 1023 (HTTP 80, HTTPS 443, SSH 22). Registered ports 1024 to 49151. Dynamic or private ports 49152 to 65535. By default Nmap scans the 1000 most common ports, not all 65,535. That is why a result says "Not shown: 994 closed tcp ports" when six ports are listed (994 + 6 = 1000).
+
+**Summary of all scans (read this table before the detail sections):**
+
+| Scan | Switch | Probe sent | Open port answer | Closed port answer |
 | --- | --- | --- | --- | --- |
-| TCP connect | -sT | SYN, then full handshake | SYN/ACK | RST |
-| SYN (half-open) | -sS | SYN | SYN/ACK | RST |
-| Xmas | -sX | FIN + PSH + URG | No reply | RST |
+| TCP Connect | -sT | SYN (full handshake) | SYN/ACK, then ACK | RST |
+| Half-open (SYN) | -sS | SYN | SYN/ACK, then RST | RST |
+| Xmas | -sX | FIN+PSH+URG | No reply | RST |
 | FIN | -sF | FIN | No reply | RST |
 | NULL | -sN | No flags | No reply | RST |
-| Maimon | -sM | FIN + ACK | No reply (BSD drops it) | RST |
+| Maimon | -sM | FIN+ACK | No reply (BSD type) | RST |
 | ACK | -sA | ACK | RST (unfiltered) | RST (unfiltered) |
-| Window | -sW | ACK | RST with window above 0 | RST with window 0 |
-| UDP | -sU | Empty UDP datagram | UDP reply or no reply | ICMP port unreachable |
+| Window | -sW | ACK | RST, window not zero | RST, window zero |
+| Idle (IPID) | -sI | Spoofed SYN | Zombie IPID up by 2 | Zombie IPID up by 1 |
+| UDP | -sU | UDP packet | UDP reply or none | ICMP port unreachable |
 | SCTP INIT | -sY | INIT chunk | INIT-ACK | ABORT |
-| SCTP COOKIE ECHO | -sZ | COOKIE ECHO chunk | No reply | ABORT |
-| Idle | -sI | Spoofed SYN via zombie | Zombie IP ID rises by 2 | Zombie IP ID rises by 1 |
+| SCTP COOKIE ECHO | -sZ | COOKIE-ECHO chunk | No reply | ABORT |
 
-In every TCP row, no reply at all (or an ICMP unreachable error) from a SYN-type probe means the port is filtered.
+**How a scan works in general (numbered steps):**
 
-#### TCP connect scan, also full open scan (-sT)
+1. Nmap picks the ports (default: the top 1000; change with -p).
+2. It sends the chosen probe to each port, many in parallel.
+3. It matches each reply, or the lack of one, to a state.
+4. It retries ports that gave no reply (to rule out packet loss).
+5. It prints the open ports and a count of the others.
 
-**What it is:** The scanner asks the operating system to open a real TCP connection to each port. It completes the full three-way handshake (SYN, SYN/ACK, ACK).
+**Real-world use:** A tester sees a host with 21, 80, 135, 139, 445, and 3389 open. FTP, SMB, and RDP on one machine are risky. She notes each one for the vulnerability phase.
+
+**Tools and commands used here:** Nmap (all switches), Zenmap, Hping3, Metasploit scanner modules, NetScanTools Pro. Commands are in section 5.
+
+**AI angle (ADDED CONTEXT):** An AI assistant can pick the scan type. Example prompt: "I need a port scan that never completes the TCP handshake and covers all 65535 ports on 10.10.1.11. Give me the Nmap command." Answer: nmap -sS -p- 10.10.1.11. The AI can also summarize large results: "Group these Nmap results by risk and list the three ports to test first." Check every AI answer. A wrong switch (for example -sT instead of -sS) changes how visible the scan is.
+
+**Countermeasures and defense:** See 3.29. Close unused ports, use a default-deny firewall, and add IDS rules for scanning.
+
+> **EXAM TIP:** Questions describe the packet ("sends a SYN, then RST"). Convert the description into a scan name, then into a switch.
+
+**EXAM FOCUS:**
+
+- How it is asked: "Which scan never completes the three-way handshake?" (half-open). "Which scan finds firewall rules rather than open ports?" (ACK).
+- Keywords: "full open", "stealth", "half-open", "inverse", "zombie", "no response means open".
+- Common trap: Many students mix up "stealth" (-sS) with "silent". It is only stealthier than connect scan. Modern IDS still see it.
+- Look-alike: Open TCP scanning (connect) vs Stealth TCP scanning (half-open, inverse, ACK) vs Third-party scanning (idle).
+
+**Memory trick:** The TCP tree has three branches: "Open, Stealth, Third-party" = "O-S-T". Inside Stealth: "Half, Inverse, ACK" = "H-I-A".
+
+### 3.7 TCP Connect / Full Open Scan (-sT)
+
+**What it is:** The scanner completes the full three-way handshake with each port, then closes the connection. It uses the operating system's own connect() function, so it needs no special rights. Switch: nmap -sT -v TARGET. The -v makes the output verbose (more detail).
+
+**Analogy:** You knock, the door opens, you say hello, shake hands, and then leave. Everyone in the house remembers you came.
+
+**How it works (numbered steps):**
+
+1. Nmap asks the OS to connect to port N.
+2. The OS sends SYN.
+3. Open port: the target sends SYN/ACK. The OS sends ACK. The connection is made, and Nmap closes it.
+4. Closed port: the target sends RST. Nmap records "closed".
+5. No answer or an ICMP error: the port is "filtered".
+
+**Key facts:**
+
+- Works without administrator or root rights. It is the default scan when the user is not privileged.
+- Slowest and noisiest TCP scan. The target application often logs the connection.
+- It cannot use raw packet tricks. Options such as --spoof-mac, decoys (-D), and fragmentation (-f) do not apply to it.
+
+**Real-world use:** A tester on a locked-down workstation without admin rights runs -sT to get a quick list of open ports on a server. The server's log shows many short connections from her IP.
+
+**Tools:** Nmap -sT, Metasploit auxiliary/scanner/portscan/tcp (ADDED CONTEXT, verify), NetScanTools Pro.
+
+**Countermeasures:** Connection logging with alerts on many short connections. Rate limits. Firewall rules that drop unwanted ports.
+
+**EXAM FOCUS:** Keywords: "full open scan", "completes the handshake", "no root", "OS connect call", "easily logged". Trap: the screenshot on page 8 shows -sT used with --spoof-mac. Nmap says those options are not honored for TCP connect scan (see 3.26). Look-alike: -sT (connect, full) vs -sS (half-open).
+
+**Memory trick:** "T = Total handshake. S = Stops short."
+
+### 3.8 Stealth Scan: Half-open Scan (-sS)
+
+**What it is:** The scanner sends SYN but never finishes the handshake. After SYN/ACK it sends RST, so the connection is never fully made. Switch: nmap -sS -v TARGET. It is also called the SYN scan or SYN stealth scan.
+
+**Analogy:** You ring the doorbell. When someone says "Yes?" you run away before they open the door. They may not even write it down in the visitor book.
+
+**How it works (numbered steps):**
+
+1. Nmap crafts a raw SYN packet.
+2. Open port: the target replies SYN/ACK. Nmap sends RST and marks "open". The handshake never completes.
+3. Closed port: the target replies RST. Nmap marks "closed".
+4. No reply, or an ICMP unreachable error: "filtered".
+
+**Key facts:**
+
+- Needs raw sockets, so it needs administrator or root rights. This is Nmap's default scan when it has those rights.
+- Faster than connect scan. Applications often do not log it because the connection never reaches them. Firewalls and IDS can still see it (the SYN packets are in their logs).
+- It is called stealth because older systems logged only completed connections.
+
+**Real-world use:** A red team runs -sS across a /24 at the start of a test. The web server logs show nothing. The firewall log shows many SYN packets with no data, which the SOC (security operations center) notices on review.
+
+**Tools:** Nmap -sS, Hping3 -S (one probe at a time), Masscan (very fast SYN scanner, ADDED CONTEXT).
+
+**Countermeasures:** IDS rules for many SYN packets without ACK follow-up. SYN flood protection. Port knocking (ADDED CONTEXT). Close unneeded ports.
+
+**EXAM FOCUS:** Keywords: "half-open", "does not complete the three-way handshake", "SYN, SYN/ACK, RST", "stealth", "raw packets". Trap: stealth does not mean undetectable. Look-alike: half-open scan vs SYN flood (a DoS attack that never finishes handshakes to fill the target's table).
+
+**Memory trick:** "Half-open = Hello, Hello-back, Ha-ha-gone (RST)".
+
+### 3.9 Inverse TCP Flag Scans: Xmas, FIN, NULL, and Maimon
+
+**What it is:** Inverse TCP flag scanning sends probes with odd flag settings (or no flags). The rule is "inverse": an open port gives no reply, a closed port gives RST. This is the opposite of a normal handshake, where the open port speaks. The slide lists four scans under this heading.
+
+**Analogy:** You send a letter to a house with a strange envelope. If the house is empty (closed), the post office sends back "return to sender" (RST). If someone lives there (open), they ignore the odd letter and say nothing.
+
+**Why it works (ADDED CONTEXT):** The original TCP standard (RFC 793) says that a packet without SYN, RST, or ACK arriving at an open port should be dropped, and arriving at a closed port should get RST. Hosts that follow this rule leak the port state. Windows and some others do not follow it, and send RST for every port.
+
+#### 3.9.1 Xmas Scan (-sX)
+
+**What it is:** Sends a packet with FIN, PSH, and URG all set. The packet is "lit up like a Christmas tree". Switch: nmap -sX -v TARGET.
 
 **How it works:**
 
-1. The scanner sends SYN to the port.
-2. If the port is open, the host answers SYN/ACK. The scanner sends ACK, so the connection exists, and then closes it.
-3. If the port is closed, the host answers RST.
-4. If nothing comes back, the port is filtered.
+1. Nmap sends a TCP packet with FIN + PSH + URG.
+2. Closed port: the target replies RST.
+3. Open port: no reply (state "open or filtered").
+4. ICMP unreachable: "filtered".
 
-**Why use it:** It needs no special privileges (no root), because it uses the normal connect() call. It is the default Nmap scan for a user without raw socket rights.
+#### 3.9.2 FIN Scan (-sF)
 
-**Downsides:** It is slow and noisy. The target service sees a real connection and logs it. An IDS spots many connections from one source quickly.
+**What it is:** Sends a packet with only the FIN flag set, on a connection that does not exist. Switch: nmap -sF -v TARGET.
 
-**Command and reading:**
+**How it works:** Same reply pattern. Closed port: RST. Open port: silence.
 
-```bash
-nmap -sT -v 10.10.1.11
-```
+#### 3.9.3 NULL Scan (-sN)
 
-In the module's MAC spoofing screenshot, a connect scan shows "Not shown: 994 closed tcp ports (conn-refused)". The reason text "conn-refused" is typical of a connect scan. A SYN scan shows "reset" instead.
+**What it is:** Sends a packet with no flags set at all (all flag bits are 0). Switch: nmap -sN -v TARGET.
 
-#### SYN scan, also half-open or stealth scan (-sS)
+**How it works:** Same reply pattern. Closed port: RST. Open port: silence.
 
-**What it is:** The scanner sends SYN and watches the reply. It never finishes the handshake. After SYN/ACK it sends RST, so the connection is never established. This is why it is called half-open.
+#### 3.9.4 Maimon Scan (-sM)
 
-**How it works:**
+**What it is:** Sends a packet with FIN and ACK set. It is named after Uriel Maimon, who described the technique. Switch: nmap -sM -v TARGET.
 
-1. The scanner sends SYN.
-2. SYN/ACK back = open. The scanner then sends RST to tear it down.
-3. RST back = closed.
-4. No reply or ICMP unreachable = filtered.
+**How it works:** On some BSD-derived systems, an open port drops the packet (silence) and a closed port replies RST. Most modern systems reply RST for both, so Maimon rarely works today (ADDED CONTEXT, verify).
 
-**Why use it:** It is fast and, because no connection completes, many applications do not log it. It is the default scan when you run Nmap as root or administrator.
+**Comparison table:**
 
-**Downsides:** It needs raw socket access (root). Modern firewalls and IDS products still detect and log SYN scans, so "stealth" is a historic name and not a guarantee.
+| Scan | Flags set | Switch | Open port | Closed port |
+| --- | --- | --- | --- | --- |
+| Xmas | FIN, PSH, URG | -sX | No reply | RST |
+| FIN | FIN | -sF | No reply | RST |
+| NULL | None | -sN | No reply | RST |
+| Maimon | FIN, ACK | -sM | No reply (BSD) | RST |
 
-```bash
-sudo nmap -sS -v 10.10.1.11
-```
+**Real-world use:** A tester scans a Linux web server behind a simple stateless packet filter. A SYN scan is blocked, but -sF passes. The result shows port 80 as "open or filtered" and the rest as closed.
 
-**Sample output (based on the module's screenshots, shortened):**
+**Tools:** Nmap -sX, -sF, -sN, -sM. Hping3 can send the same flags by hand (-F, -P, -U, and so on).
+
+**Limits:**
+
+- **Do not work on Windows.** Windows answers RST on every port, so everything looks closed. The same is true for some Cisco devices (ADDED CONTEXT).
+- Cannot tell "open" from "filtered", because both give silence.
+- A stateful firewall drops these packets, so they pass only simple filters.
+- Need root or administrator rights (raw packets).
+
+**Countermeasures:** Use a stateful firewall that drops packets which do not belong to a known connection. Add IDS signatures for Xmas, FIN, and NULL patterns.
+
+> **EXAM TIP:** "The scan returned that all ports were closed on a Windows host" -> the tester used an inverse flag scan (Xmas, FIN, or NULL) against Windows. Those scans cannot work there.
+
+> **TRAP:** In these scans silence means open (or filtered). In a SYN scan, silence means filtered. Read the question carefully.
+
+**EXAM FOCUS:**
+
+- How it is asked: "Which scan sets the FIN, URG, and PSH flags?" (Xmas). "Which scan sends a packet with no flags?" (NULL). "Which scan does not work against Windows?" (FIN, NULL, Xmas).
+- Keywords: "Christmas tree", "all flags off", "RFC 793 compliant", "UNIX/Linux target", "inverse".
+- Common trap: The slide's command text shows the three as a group, "-(-sF, -sN, -sX)". This means one of the three switches. Maimon is -sM.
+- Look-alike: NULL (no flags) vs FIN (one flag) vs Xmas (three flags). Maimon is FIN + ACK.
+
+**Memory trick:** "X is the crossed-out tree: Xmas = FPU (FIN, PSH, URG). N = Nothing (NULL). F = Finish (FIN). M = Maimon has a Mix (FIN + ACK)." And "Closed answers RST, open keeps quiet".
+
+### 3.10 ACK Flag Probe Scan (-sA), TTL-based Scan, and Window Scan
+
+**What it is:** The ACK flag probe scan sends TCP packets with only the ACK flag set. It does not find open ports. It finds out how the firewall treats a port: blocked (filtered) or allowed through (unfiltered). Switch: nmap -sA -v TARGET. The slide shows two variants below it: the TTL-based scan and the window scan.
+
+**Analogy:** You do not try to enter the building. You hand a note to the guard that says "this is a reply to your earlier question". If the guard says "I never asked you anything" (RST), the guard is there and the road to him is open. If you get no answer at all, something in the middle (a firewall) swallowed the note.
+
+**How it works (plain ACK scan):**
+
+1. Nmap sends a TCP packet with the ACK flag set to a port.
+2. A reply of RST means the packet reached the host. The port is "unfiltered" (open or closed is still unknown).
+3. No reply, or an ICMP unreachable error, means a firewall blocks it. The port is "filtered".
+4. Nmap uses the result to map the firewall rule set. It also shows whether the firewall is stateful.
+
+**TTL-based scan (slide command: nmap -sA -ttl 100 -v TARGET):**
+
+- The attacker sends ACK probes and studies the TTL (Time To Live) field of the RST replies.
+- EC-Council's rule of thumb: if the TTL of the RST reply is lower than the boundary value 64, the port is open (verify against your courseware; it is a heuristic, not a guarantee).
+- [UNCLEAR on page 3]: The slide writes the switch as -ttl 100. The real Nmap option is --ttl (with two dashes). Learn the slide wording for the exam, and use --ttl in a real tool.
+
+**Window scan (slide command: nmap -sA -sW -v TARGET):**
+
+- The attacker sends ACK probes and studies the TCP window field of the RST replies.
+- EC-Council's rule of thumb: a non-zero window value means the port is open; a zero window means closed (verify).
+- [UNCLEAR on page 3]: On a real system the window scan is the single switch -sW. The slide shows it written after -sA. Remember "-sW = window scan".
+
+**Real-world use:** A tester wants to know if a firewall blocks port 22 or just the host has no SSH. An ACK scan returns "filtered" for 22 and "unfiltered" for 80. The conclusion: the firewall drops traffic to 22 and passes traffic to 80.
+
+**Tools:** Nmap -sA and -sW, Hping3 -A (ACK packet).
+
+**Countermeasures:** Use a stateful firewall. A stateful firewall drops an ACK that is not part of a known connection. A stateless filter lets it through, which gives the attacker a map.
+
+**EXAM FOCUS:**
+
+- How it is asked: "Which scan determines firewall rules and whether ports are filtered?" (ACK). "Which scan analyzes the TTL or window of the RST packet?" (ACK-based variants).
+- Keywords: "firewall rule set", "stateful or stateless", "unfiltered", "RST received".
+- Common trap: An ACK scan cannot say a port is open in the strict sense. It only says unfiltered or filtered.
+- Look-alike: ACK scan (-sA, maps firewall) vs ACK ping (-PA, host discovery) vs window scan (-sW).
+
+**Memory trick:** "A for Allowed? ACK asks if the path is Allowed". TTL under 64 and non-zero window both point to "open" in the EC-Council rule.
+
+### 3.11 IDLE / IPID Header Scan (-sI): Third-party and Spoofed Scan
+
+**What it is:** The idle scan lets the attacker scan a target without sending one packet from his own IP address. The scan "bounces" off a third machine, called the zombie (or idle host). The target sees the zombie as the scanner. The slide places it under "Third Party and Spoofed TCP Scanning Methods". Command on the slide: nmap -Pn -p- -sI ZOMBIE TARGET.
+
+**Analogy:** You want to know if a house is occupied without being seen. You ask a friend (the zombie) to stand outside and count how many times the neighbor's dog barks. You send a fake letter to the house in your friend's name. If the dog barks twice instead of once, someone lived there.
+
+**Key terms:**
+
+- **IP ID (IPID):** a 16-bit number in the IP header that identifies a packet. Many systems raise it by one for every packet they send.
+- **Zombie:** an idle machine with a predictable (incrementing) IPID that the attacker uses as a blind relay. It must be quiet (idle), or the counts become unreliable.
+
+**How it works (numbered steps):**
+
+1. The attacker sends an unsolicited SYN/ACK to the zombie. The zombie replies RST. The attacker reads the IPID, for example 1000.
+2. The attacker sends a SYN to the target port, with the source address forged as the zombie.
+3. If the target port is open, the target sends SYN/ACK to the zombie. The zombie did not start this, so it sends RST. This uses one more IPID.
+4. If the target port is closed, the target sends RST to the zombie. The zombie does not reply to a RST. The IPID does not change.
+5. The attacker probes the zombie again and reads the IPID.
+6. IPID rose by 2 (1000 to 1002): the target port is open. IPID rose by 1 (1000 to 1001): the port is closed or filtered.
 
 ```text
+ Attacker                    Zombie                     Target
+    |--- SYN/ACK ------------>|                           |
+    |<-- RST, IPID=1000 ------|                           |
+    |--- SYN (src = Zombie) ------------------------------>|
+    |                         |<-- SYN/ACK (port open) ----|
+    |                         |--- RST (IPID=1001) ------->|
+    |--- SYN/ACK ------------>|                           |
+    |<-- RST, IPID=1002 ------|     (+2 means port open)  |
+```
+
+The switch parts: -Pn skips host discovery (the zombie scan needs no ping), -p- means all 65,535 ports, -sI names the zombie.
+
+**Real-world use:** An attacker wants to scan a bank's server without his own IP appearing in its logs. He finds an old network printer with an incrementing IPID and uses it as a zombie. The bank's logs show the printer as the scanner.
+
+**Why it is "stealthy":** The attacker's IP never reaches the target (only the spoofed zombie IP does). It can also bypass IP-based trust, because the target may accept traffic from the zombie's address (ADDED CONTEXT).
+
+**Tools:** Nmap -sI. Hping3 can do it manually. Metasploit has an IPID sequence scanner to find zombie candidates (module name ADDED CONTEXT, verify: auxiliary/scanner/ip/ipidseq). The Nmap script ipidseq also tests IPID behavior (verify).
+
+**Countermeasures:** Ingress filtering and egress filtering to block spoofed packets. Use operating systems with random or per-destination IPIDs (many modern systems do this, ADDED CONTEXT). Keep idle devices patched and firewalled.
+
+> **EXAM TIP:** "Scan without revealing the attacker's IP address", "zombie", or "IPID increment" -> idle scan.
+
+**EXAM FOCUS:**
+
+- How it is asked: "Which scan uses a third-party host with a predictable IP ID?" (idle scan).
+- Keywords: "zombie", "IPID", "spoofed", "blind scan", "-sI".
+- Common trap: The answer is not "decoy scan". In a decoy scan the attacker's real IP is still in the mix. In an idle scan it is hidden.
+- Look-alike: idle scan (-sI) vs decoy scan (-D) vs IP spoofing with hping3 (-a).
+
+**Memory trick:** "Idle = I use someone Else. IPID +2 = Is open, +1 = it is shut."
+
+### 3.12 UDP Scanning (-sU)
+
+**What it is:** UDP scanning checks which UDP ports are open. UDP (User Datagram Protocol) has no handshake. The sender just fires a datagram and hopes. Switch on the slide: nmap -sU -v TARGET.
+
+**Analogy:** You post a card with no reply envelope. If the address does not exist, the mail service may send "no such address" back (ICMP port unreachable). If the house exists and wants the card, it may never write back at all. Silence is not proof either way.
+
+**How it works (numbered steps):**
+
+1. Nmap sends a UDP packet to a port.
+2. Closed port: the target sends back ICMP port unreachable (type 3, code 3).
+3. Open port: the target usually sends nothing, or sends a UDP reply if the packet is a real request for that service.
+4. Other ICMP unreachable codes mean "filtered".
+5. No reply at all gives "open or filtered".
+
+**Key facts:**
+
+- Slow. Hosts limit how many ICMP errors they send (Linux sends about one per second), so scanning 65,535 UDP ports can take hours.
+- Often combined with -sV, so the service answers a real request and the port can be confirmed open (ADDED CONTEXT).
+- Often forgotten by defenders, which makes UDP services attractive targets.
+
+**Common UDP ports (ADDED CONTEXT):** 53 DNS, 67 and 68 DHCP, 69 TFTP, 123 NTP, 137 and 138 NetBIOS, 161 and 162 SNMP, 500 IKE (IPsec), 514 syslog, 1900 SSDP, 5353 mDNS.
+
+**Real-world use:** A tester finds nothing odd in the TCP scan. A UDP scan reveals SNMP on port 161 with a default community string. That leads to a full device configuration dump in the enumeration phase (Module 04).
+
+**Tools:** Nmap -sU, Hping3 -2 (UDP mode), Netcat -u (ADDED CONTEXT), NetScanTools Pro.
+
+**Countermeasures:** Block unused UDP at the firewall. Disable unneeded UDP services (SNMP v1 and v2, TFTP). Change default SNMP community strings.
+
+**EXAM FOCUS:** Keywords: "ICMP port unreachable", "connectionless", "no handshake", "SNMP, DNS, TFTP". Trap: A lack of reply on UDP does not prove a port is open or closed. Look-alike: -sU (UDP port scan) vs -PU (UDP ping).
+
+**Memory trick:** "UDP: U-nreachable means closed. Quiet means maybe."
+
+### 3.13 SCTP Scanning: INIT (-sY) and COOKIE ECHO (-sZ)
+
+**What it is:** SCTP (Stream Control Transmission Protocol) is a transport protocol like TCP and UDP. It keeps messages in order, can use several network paths (multi-homing), and carries several streams in one connection. Phone networks use it for signaling (telecom and 4G and 5G control traffic, ADDED CONTEXT). The slide lists two SCTP scans.
+
+**Analogy:** SCTP is a courier company that sends several parcels in parallel lanes and has a backup route. Its handshake has four steps, not three: INIT, INIT-ACK, COOKIE-ECHO, and COOKIE-ACK. The "cookie" is a token that proves the sender is real and prevents SYN-flood style attacks.
+
+**SCTP INIT scan (nmap -sY -v TARGET):**
+
+1. Nmap sends an INIT chunk to the port.
+2. INIT-ACK reply: the port is open.
+3. ABORT reply: the port is closed.
+4. No reply, or an ICMP unreachable error: filtered.
+5. The scan never finishes the four-way handshake. It is the SCTP version of the half-open SYN scan.
+
+**SCTP COOKIE ECHO scan (nmap -sZ -v TARGET):**
+
+1. Nmap sends a COOKIE-ECHO chunk to the port without doing the first steps.
+2. Closed port: the target replies ABORT.
+3. Open port: the target says nothing (the packet is dropped).
+4. Silence means "open or filtered". Some firewalls and IDS only watch INIT chunks, so this scan can be quieter, but it cannot separate open from filtered.
+
+**Real-world use:** A telecom operator tests the core network that uses SCTP between nodes. An INIT scan finds an SCTP service exposed to the wrong network segment.
+
+**Tools:** Nmap -sY and -sZ.
+
+**Countermeasures:** Filter SCTP at the edge if not used. Restrict SCTP ports to known peers.
+
+**EXAM FOCUS:** Keywords: "SCTP", "INIT chunk", "COOKIE ECHO", "four-way handshake". Trap: -sY is SCTP INIT, -sZ is SCTP COOKIE ECHO. Look-alike: -sY (SCTP INIT) vs -sS (TCP SYN) vs -sZ.
+
+**Memory trick:** "Y comes before Z. INIT comes before COOKIE ECHO." Or: "sY = start (INIT), sZ = Zip (the last cookie)".
+
+### 3.14 SSDP Scanning
+
+**What it is:** SSDP (Simple Service Discovery Protocol) is how Universal Plug and Play (UPnP) devices announce themselves and are found on a network. It uses UDP port 1900 and the multicast address 239.255.255.250 (ADDED CONTEXT). The slide lists SSDP scanning as a port and service discovery technique but gives no command. SSDP scanning finds UPnP devices such as routers, smart TVs, printers, cameras, and media boxes.
+
+**Analogy:** A new device joins a building and shouts "I am a printer, here is my address" to everyone. SSDP scanning is like standing in the lobby and listening to all these announcements, or shouting "Who is here?" and collecting replies.
+
+**How it works:**
+
+1. The scanner sends an SSDP M-SEARCH message to UDP 1900 (multicast or direct).
+2. UPnP devices answer with a short description (device type and a URL for more details).
+3. The scanner reads the description files to learn the device model, firmware, and services.
+
+**Why attackers care (ADDED CONTEXT):**
+
+- UPnP can let a program open ports on the router without a password, which an attacker can abuse.
+- Old UPnP stacks have many known vulnerabilities.
+- Open SSDP servers can be used for reflection and amplification DDoS attacks (Module 10).
+
+**Tools (ADDED CONTEXT, verify):** Nmap scripts upnp-info and broadcast-upnp-info, Metasploit auxiliary/scanner/upnp/ssdp_msearch, gssdp-discover.
+
+**Countermeasures:** Turn off UPnP on routers when not needed. Block UDP 1900 from the internet. Keep firmware updated.
+
+**EXAM FOCUS:** Keywords: "UPnP", "UDP 1900", "M-SEARCH", "multicast 239.255.255.250". Trap: SSDP is not a port scan type like SYN. It is a protocol-specific discovery. Look-alike: SSDP (UPnP discovery) vs SNMP (device management, UDP 161) vs SMTP.
+
+**Memory trick:** "SSDP = Simple Service Discovery, port 1900 (19-00: nineteen hundred)".
+
+### 3.15 IPv6 Scanning (-6)
+
+**What it is:** IPv6 is the newer addressing system (128-bit addresses written in hex, for example 2001:db8::1). Many hosts have it enabled whether or not the admin knows. Nmap scans IPv6 targets with the -6 switch. Slide command: nmap -6 TARGET-IP-OR-DOMAIN.
+
+**Analogy:** A building has a new back entrance that the security staff forgot. IPv6 is often that entrance: the front door (IPv4) has guards, but the back door (IPv6) has no rules.
+
+**How it works:**
+
+1. The attacker finds the IPv6 address of a host (from DNS AAAA records, or by listening on the local network).
+2. Nmap runs with -6 and any normal scan type (for example nmap -6 -sS TARGET).
+3. Results are read like normal IPv4 results.
+
+**Key facts (ADDED CONTEXT):**
+
+- A single IPv6 subnet (/64) has 2^64 addresses, so a blind ping sweep is not practical.
+- Attackers use DNS records (AAAA), neighbor discovery, and multicast. The all-nodes multicast address ff02::1 can reveal local hosts.
+- IPv6 does not use ARP. It uses Neighbor Discovery Protocol (NDP) inside ICMPv6.
+- Firewalls are often configured only for IPv4, leaving IPv6 services exposed.
+- Tools: Nmap -6, THC-IPv6 toolkit (alive6, verify), Nmap script targets-ipv6-multicast-echo (verify).
+
+**Real-world use:** A company firewalls its IPv4 address but not the IPv6 address of the same web server. An IPv6 scan shows SSH and a database port open.
+
+**Countermeasures:** Apply the same firewall rules to IPv6 as to IPv4, or disable IPv6 where it is unused. Monitor IPv6 traffic.
+
+**EXAM FOCUS:** Keywords: "-6", "128-bit", "AAAA record". Trap: Writing -6 does not change the scan type. It only enables IPv6 targets. Look-alike: -6 (IPv6) vs -n (no DNS) vs -sY.
+
+**Memory trick:** "Six for IPv6."
+
+### 3.16 Service Version Discovery (-sV)
+
+**What it is (simple words):** After a port is found open, service version discovery finds out which program is behind it and which version it is. The slide gives three points. It helps the attacker learn which services run on a target and their versions. An accurate version number lets the attacker decide if the target is vulnerable to particular exploits. In Zenmap the -sV option detects service versions.
+
+**Analogy:** Port scanning says "there is a door". Version detection says "it is a Brand X lock, model 2019". Now you can look up which keys fit that model.
+
+**How it works (numbered steps):**
+
+1. Nmap finds an open port (for example 80).
+2. Nmap connects and sends probes from its service database (nmap-service-probes).
+3. It reads the reply (the banner) and matches it against known patterns.
+4. It prints the product name, version, and extra info (OS, device type, CPE).
+5. The attacker searches exploit databases for that exact version.
+
+**The Zenmap window (page 3 screenshot):** Zenmap is the Nmap graphical interface.
+
+| Part of the window | Meaning |
+| --- | --- |
+| Target | The host or range to scan |
+| Profile | A saved set of options (for example intense scan) |
+| Command | The exact Nmap command Zenmap runs |
+| Scan and Cancel | Start or stop the scan |
+| Hosts and Services buttons | Left panel: list by host or by service |
+| Nmap Output tab | Raw text result |
+| Ports/Hosts tab | Table of ports for the selected host |
+| Topology tab | Picture of the network path |
+| Host Details tab | Summary of one host |
+| Scans tab | History of past scans |
+| Filter Hosts | Search the host list |
+
+**Reading the sample result (command: nmap -sV 10.10.1.11):**
+
+```text
+PORT     STATE SERVICE       VERSION
+21/tcp   open  ftp           Microsoft ftpd
+80/tcp   open  http          Microsoft IIS httpd 10.0
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp  open  microsoft-ds  Microsoft Windows 7 - 10 microsoft-ds
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+MAC Address: 00:15:5D:01:80:00 (Microsoft)
+Service Info: Host: WINDOWS11; OS: Windows
+CPE: cpe:/o:microsoft:windows
+```
+
+[UNCLEAR on page 3]: The exact version text of ports 445 and 3389, the Service Info host name, and the scan time are small on the screenshot. The reading above is the best fit. The slide also shows "Not shown: 994 closed tcp ports (reset)".
+
+How to read it: PORT is the port number and protocol. STATE is open. SERVICE is Nmap's guess from the port number. VERSION is the verified product and version. "Microsoft IIS httpd 10.0" tells the attacker the web server is IIS 10, which belongs to Windows Server 2016 or later (ADDED CONTEXT). "Service Info: OS: Windows" and the CPE give the platform in a standard format (CPE = Common Platform Enumeration, a naming scheme used by vulnerability databases). "(reset)" in "closed tcp ports (reset)" means closed ports answered with RST, which is what a SYN scan or connect-type probe sees.
+
+**Useful related options (ADDED CONTEXT, verify):** --version-intensity 0 to 9 (how hard to try), --version-light, --version-all, and -A (aggressive scan: version, OS detection, default scripts, and traceroute).
+
+**Real-world use:** The scan shows port 80 runs "Apache httpd 2.4.49". The tester knows that exact version has a known path traversal flaw (CVE-2021-41773, verify). He reports it as critical.
+
+**Tools:** Nmap -sV, Zenmap, Netcat and Telnet (banner grabbing by hand), Metasploit scanners.
+
+**AI angle (ADDED CONTEXT):** Paste the -sV output into an AI assistant and ask: "List the known risks for each service and version in this scan. Mark which versions are end of life." The AI speeds up triage. It can be wrong or out of date, so confirm each CVE (Common Vulnerabilities and Exposures number) in an official database.
+
+**Countermeasures and defense:** Hide or change service banners. Remove version strings from web servers. Patch services so a known version no longer matters. Use a WAF or proxy to hide the real server.
+
+**EXAM FOCUS:**
+
+- How it is asked: "Which Nmap option detects service versions?" (-sV). "Why does an attacker need an exact version?" (to match exploits).
+- Keywords: "service version", "determine the vulnerability", "banner", "-sV".
+- Common trap: -sV is not -O. -O guesses the OS. -sV identifies the service product and version. Both together are in -A.
+- Look-alike: -sV (version) vs -sS (SYN scan) vs -sU (UDP).
+
+**Memory trick:** "V for Version". "sV = See Version."
+
+### 3.17 How to Identify the Target System OS (TTL and TCP Window Size)
+
+**What it is (simple words):** Every operating system sets certain header values in a slightly different way. The slide says attackers can identify the OS by looking at two values in the first packet of a TCP session: the Time To Live (TTL) and the TCP window size. The attacker captures the reply from the target with a packet sniffer such as Wireshark and reads these two fields.
+
+- **TTL (Time To Live):** a number in the IP header that starts at a value chosen by the OS and goes down by 1 at every router. When it reaches 0 the packet is dropped. It stops packets from circling forever.
+- **TCP window size:** a number in the TCP header that tells the other side how much data can be sent before waiting for an acknowledgement.
+- **Sniffer:** a tool that records packets on a network (Wireshark is the example on the slide).
+
+**Analogy:** Every country puts a different style of stamp on its mail. You do not need to open the letter. You look at the stamp and guess the country.
+
+**The table on the slide (learn it):**
+
+| Operating system | Time To Live | TCP window size |
+| --- | --- | --- |
+| Linux | 64 | 5840 |
+| FreeBSD | 64 | 65535 |
+| OpenBSD | 255 | 16384 |
+| Windows | 128 | 65,535 bytes to 1 gigabyte |
+| Cisco routers | 255 | 4128 |
+| Solaris | 255 | 8760 |
+| AIX | 255 | 16384 |
+
+**How it works (numbered steps):**
+
+1. The attacker makes the target send a packet (for example by starting a connection to an open port).
+2. The attacker captures the reply with Wireshark. The first reply in a TCP session is the SYN/ACK.
+3. The attacker opens the IP header and reads the TTL. He opens the TCP header and reads the window size.
+4. The attacker compares both values with the table.
+5. The match gives the likely OS. The slide screenshots show "Possible OS is Windows" for a packet with TTL 128 and "Possible OS is Linux" for a packet with TTL 64.
+
+**Reading a TTL that has dropped on the way (ADDED CONTEXT):** The TTL you see is the starting value minus the number of routers crossed. Round up to the nearest standard start value: 64, 128, or 255. A TTL of 117 means start 128 (Windows) about 11 hops away. A TTL of 52 means start 64 (Linux or FreeBSD) about 12 hops away.
+
+**A packet in Wireshark looks like this (representative sample):**
+
+```text
+Internet Protocol Version 4, Src: 10.10.1.11, Dst: 10.10.1.9
+    Time to Live: 128
+    Protocol: TCP (6)
+Transmission Control Protocol, Src Port: 80, Dst Port: 51234
+    Flags: 0x012 (SYN, ACK)
+    Window: 65535
+```
+
+Line 2 is the TTL (128 -> Windows). The Flags line shows SYN, ACK, so this is the first reply of the session. The Window line gives the second clue.
+
+**Wireshark display filters you may need (ADDED CONTEXT):** ip.ttl == 128 shows packets with that TTL. tcp.flags.syn == 1 and tcp.flags.ack == 1 shows SYN/ACK packets. ip.src == 10.10.1.11 limits the view to one host.
+
+**Limits (ADDED CONTEXT):** The table is a guide, not proof. Admins can change the TTL. Newer systems use other window sizes (verify for modern Linux and Windows). Firewalls and proxies can rewrite packets. Use Nmap -O or banner grabbing for a stronger answer.
+
+**Real-world use:** A tester captures the traffic to a mystery host. TTL is 255 and window is 4128. By the table it is a Cisco router, not a server. She plans a router test, not a web server test.
+
+**Tools:** Wireshark (passive reading), p0f (automatic passive fingerprinting, ADDED CONTEXT), Nmap -O (active fingerprinting), Xprobe2 (ADDED CONTEXT).
+
+**Countermeasures and defense:** Change default TTL and TCP stack settings so the OS is harder to guess. Use a firewall or reverse proxy so the attacker sees the proxy and not the real server. This slows guessing but does not stop a determined attacker.
+
+> **EXAM TIP:** Memorize three TTL groups: 64 (Linux, FreeBSD), 128 (Windows), 255 (OpenBSD, Cisco, Solaris, AIX). Questions often give only the TTL.
+
+**EXAM FOCUS:**
+
+- How it is asked: "A captured packet has TTL 128. What OS is likely?" (Windows). "Which two fields help identify the OS?" (TTL and TCP window size).
+- Keywords: "first packet in a TCP session", "Wireshark", "TTL", "window size".
+- Common trap: TTL 64 is both Linux and FreeBSD. The window size separates them (5840 vs 65535 on the slide).
+- Look-alike: passive fingerprinting (sniffing) vs active fingerprinting (sending probes, Nmap -O).
+
+**Memory trick:** "Linux has 64 legs, Windows has 128 windows, routers shout 255." Window sizes: Linux 5840 is the odd small one; FreeBSD 65535 is the biggest "normal" one.
+
+### 3.18 Packet Fragmentation
+
+**What it is (simple words):** Packet fragmentation splits a probe packet into several smaller packets (fragments) while sending it to a network. The slide says it is not a new scanning method but a modification of the earlier techniques. The TCP header is split into several packets so that packet filters are not able to detect what the packets are meant to do.
+
+**Analogy:** You want to smuggle a long sentence past a guard who only reads whole sentences. You cut it into single words and send each word on a different card. The guard sees harmless words. The receiver puts them back in order.
+
+**Key terms:**
+
+- **MTU (Maximum Transmission Unit):** the largest packet a link carries. Ethernet is usually 1500 bytes.
+- **Fragment:** a piece of an IP packet. The receiver reassembles the pieces into the original.
+- **Packet filter:** a simple firewall that checks each packet by itself (address, port, flags).
+
+**How it works (numbered steps):**
+
+1. The attacker prepares a normal probe, for example a SYN or FIN packet to port N.
+2. The tool cuts the TCP header (and any data) into tiny IP fragments. The first fragment may be too short to hold the port number or flags.
+3. A simple filter that inspects each fragment alone cannot read the full header. It lets the fragments through.
+4. The target host reassembles the fragments into the original probe and answers it.
+5. A closed port replies RST. The attacker reads the reply as in a normal scan.
+
+```text
+ Attacker                                          Target
+    |                                                  |
+    |-- SYN/FIN as small IP fragments + port (n) ----->|
+    |                                                  |
+    |<------------- RST (if port is closed) -----------|
+```
+
+**The Nmap switches (ADDED CONTEXT, from the Nmap reference guide):**
+
+| Switch | Meaning | Detail |
+| --- | --- | --- |
+| -f | Fragment packets | Splits into 8 bytes or less after IP header |
+| -f -f | Fragment more coarsely | 16 bytes per fragment |
+| --mtu N | Set your own fragment size | N must be a multiple of 8 |
+
+With -f, a 20-byte TCP header becomes three fragments (8 + 8 + 4 bytes). The command in the Zenmap screenshot (page 4) is [UNCLEAR on page 4]. The best reading is nmap -f with the target 10.10.1.11. The output on the slide shows a warning line about packet fragmentation and many "Initiating" and "Completed" lines. This is what a verbose scan prints.
+
+**Limits (ADDED CONTEXT):**
+
+- Works only with raw packet scans (SYN, FIN, NULL, Xmas, ACK, UDP) and OS detection. It does not apply to -sT connect scans or version detection (-sV), which use the host's normal TCP stack.
+- Firewalls that reassemble all fragments before inspection defeat it. Some systems cannot afford to do that, so they stay vulnerable.
+- Some old devices crash on tiny fragments.
+
+**Real-world use:** A tester finds an old router with a stateless packet filter. A normal SYN scan is dropped. The same scan with -f gets through, and port 22 is found open.
+
+**Tools:** Nmap -f and --mtu, Hping3 (fragmentation options, verify), fragroute and fragrouter (ADDED CONTEXT, verify).
+
+**Countermeasures and defense:** Reassemble fragments at the firewall before inspection. Drop very small fragments and overlapping fragments. Use an IDS that reassembles fragments (and so sees the whole packet). Keep firewall firmware updated (this also appears in 3.29).
+
+> **EXAM TIP:** If the question says "splits the TCP header across multiple packets", the answer is packet fragmentation (nmap -f).
+
+> **TRAP:** Fragmentation is not a separate scan type like SYN or FIN. It changes how any raw scan is sent.
+
+**EXAM FOCUS:**
+
+- How it is asked: "Which technique splits the probe so a packet filter cannot read the header?" (fragmentation). "What does nmap -f do?" (fragment packets).
+- Keywords: "smaller packets", "fragments", "tiny", "evade IDS".
+- Common trap: Fragmentation vs segmentation. IP fragments are Layer 3 pieces. TCP segments are Layer 4 pieces.
+- Look-alike: fragmentation (-f) vs decoy (-D) vs bad checksum (--badsum).
+
+**Memory trick:** "f = fragment" and "-f -f = fatter fragments (16)". Fragment size is always a multiple of 8.
+
+### 3.19 Source Port Manipulation
+
+**What it is (simple words):** Source port manipulation means replacing the real source port number of your probes with a common, trusted one, to get past a firewall or IDS. The slide explains the weakness. A firewall may be configured to allow packets from well-known ports such as HTTP (80), DNS (53), and FTP (21 and 20). If the attacker makes his probes come from one of these ports, the firewall lets them pass. Nmap uses the -g or --source-port option.
+
+**Analogy:** A guard lets in everyone wearing a delivery company uniform. The attacker puts on the uniform. The guard checks the uniform, not the person.
+
+**How it works (numbered steps):**
+
+1. The attacker finds that the firewall blocks probes from his normal random source port (the slide example uses port 242).
+2. He sets the source port to a trusted number such as 80 with nmap -g 80 TARGET.
+3. The firewall sees traffic that looks like a web server reply and allows it.
+4. The probe reaches the victim. The victim answers, and the attacker reads the result as usual.
+
+```text
+ Attacker                 Firewall                    Victim
+    |-- source port 242 ---->| X  (blocked)               |
+    |-- source port 80  ---->|--- allowed --------------->|
+```
+
+**Reading the page 5 screenshot (command nmap -g 80 10.10.1.11 in Zenmap):**
+
+```text
+Starting Nmap 7.94 ( https://nmap.org ) at 2024-03-12 00:53 Pacific
 Nmap scan report for 10.10.1.11
 Host is up (0.00042s latency).
 Not shown: 994 closed tcp ports (reset)
@@ -628,953 +1221,347 @@ MAC Address: 00:15:5D:01:80:00 (Microsoft)
 Nmap done: 1 IP address (1 host up) scanned in 1.65 seconds
 ```
 
-Line by line:
+[UNCLEAR on page 5]: the latency value is small. Line "Not shown: 994 closed" plus six open ports equals the 1000 default ports. The scan finished in about 1.65 seconds, which is fast because nothing blocked it.
 
-- "Not shown: 994 closed tcp ports (reset)": Nmap scanned 1000 ports. 994 were closed and replied RST, so it hides them to keep the report short. "reset" is the reason.
-- The table lists the six open ports with the service name that Nmap expects on each port number.
-- 21 = FTP, 80 = HTTP, 135 = Microsoft RPC, 139 = NetBIOS session, 445 = SMB (microsoft-ds), 3389 = RDP (ms-wbt-server). This set of ports points to a Windows machine.
-- "scanned in 1.65 seconds": a local SYN scan is fast.
+**Limits (ADDED CONTEXT):** The option works for raw scans such as SYN and UDP. It has no effect on TCP connect scans (-sT), version detection (-sV), script scanning, or OS detection, because those use normal operating system sockets or need their own ports.
 
-> **EXAM TIP:** Connect scan = full handshake, no root needed, logged. SYN scan = half-open, needs root, quieter. If the question says "does not complete the TCP handshake", the answer is SYN (half-open).
+**Real-world use:** A firewall allows DNS replies from outside, so it allows any packet with source port 53. The tester runs nmap -sS -g 53 on the internal servers behind it. Ports that were filtered before now answer, and the internal SMB and RDP ports show as open.
 
-#### Inverse TCP flag scanning: Xmas, FIN, and NULL (-sX, -sF, -sN)
+**Tools:** Nmap -g and --source-port, Hping3 -s (set the base source port, with -k to keep it fixed, verify), Netcat -p (ADDED CONTEXT).
 
-**What it is:** The scanner sends a TCP probe with unusual flags. The slide calls the group "Inverse TCP Flag Scan". The logic is inverted: an open port stays silent, and a closed port answers.
+**Countermeasures and defense:** Never trust traffic only because of its source port. Use a stateful firewall that tracks real sessions. Use application-layer proxies for DNS and FTP. Check that routing and filtering cannot be bypassed with a particular source port (this is item 3 in the countermeasure slide, 3.29).
 
-- **Xmas scan (-sX):** sets FIN, PSH, and URG. The packet is "lit up like a Christmas tree".
-- **FIN scan (-sF):** sets only FIN.
-- **NULL scan (-sN):** sets no flags at all.
-
-**How it works:** RFC 793 (the TCP standard) says a closed port must answer an unexpected packet with RST, and an open port must silently ignore it.
-
-1. The scanner sends the odd probe.
-2. No response = the port is open or filtered ("open or filtered").
-3. RST = the port is closed.
-4. ICMP unreachable (type 3) = the port is filtered.
-
-**Why use them:** They can slip through simple (non-stateful) packet filters that only block SYN packets, and they are a little quieter than a SYN scan.
-
-**Big limits:**
-
-- They only work on systems that follow RFC 793 closely (most Unix and Linux). Windows, many Cisco devices, BSDI, and IBM OS/400 answer RST on every port, so every port looks closed.
-- They cannot separate open ports from filtered ones (the result is "open or filtered").
-- Modern IDS products detect them.
-
-```bash
-sudo nmap -sX -v 10.10.1.20
-sudo nmap -sF -v 10.10.1.20
-sudo nmap -sN -v 10.10.1.20
-```
-
-**Sample output, Linux target (illustrative):**
-
-```text
-Nmap scan report for 10.10.1.20
-Host is up (0.00040s latency).
-Not shown: 998 closed tcp ports (reset)
-PORT   STATE         SERVICE
-22/tcp open|filtered ssh
-80/tcp open|filtered http
-```
-
-How to read it: the two ports that did not answer RST are shown as open|filtered. A tester must confirm them with another scan (for example -sV or a connect scan).
-
-**Sample output, Windows target (illustrative):**
-
-```text
-Nmap scan report for 10.10.1.11
-Host is up (0.00031s latency).
-All 1000 scanned ports on 10.10.1.11 are in ignored states.
-Not shown: 1000 closed tcp ports (reset)
-```
-
-How to read it: Windows replied RST to everything, so Nmap reports all ports closed. This does not mean the host has no services. It means these scan types do not work on Windows.
-
-> **TRAP:** "No response" means open for FIN, NULL, and Xmas scans. For a SYN scan, "no response" means filtered. Read the scan type before you read the result.
-
-#### Maimon scan (-sM)
-
-**What it is:** A variation of FIN, NULL, and Xmas scans. The probe has the FIN and ACK flags. It is named after Uriel Maimon, who described it in Phrack magazine in 1996.
-
-**How it works:** By the standard, a closed or open port should reply RST. Many BSD-derived systems drop the packet when the port is open, and reply RST when it is closed. So, as with the other inverse flag scans, silence means open (or filtered) and RST means closed.
-
-```bash
-sudo nmap -sM -v 10.10.1.20
-```
-
-> **EXAM TIP:** Maimon probe = FIN + ACK. Xmas probe = FIN + PSH + URG. FIN probe = FIN only. NULL probe = no flags.
-
-#### ACK flag probe scan (-sA)
-
-**What it is:** The scanner sends a packet with only the ACK flag set, which belongs to no connection. It does not find open ports. It maps the firewall rules: which ports are filtered and which are not.
-
-**How it works:**
-
-1. The scanner sends an ACK to the port.
-2. RST back = the packet reached the host. The port is "unfiltered" (it may be open or closed, the scan cannot tell).
-3. No reply, or an ICMP unreachable error = a firewall blocks the port. The port is "filtered".
-
-**Why use it:** To learn whether a firewall is stateful. A stateful firewall drops stray ACK packets. A simple packet filter lets them through.
-
-```bash
-sudo nmap -sA -v 10.10.1.11
-```
-
-**Sample output (illustrative):**
-
-```text
-Not shown: 996 filtered tcp ports (no-response)
-PORT    STATE      SERVICE
-80/tcp  unfiltered http
-443/tcp unfiltered https
-```
-
-How to read it: ports 80 and 443 pass through the firewall (unfiltered). Everything else is blocked (filtered). Nothing here says whether 80 is open.
-
-> **TRAP:** ACK scan never says "open". If a question asks which scan finds open ports, ACK is wrong. If it asks which scan maps firewall rules, ACK is right.
-
-#### TTL-based scan (ACK probe with a set TTL)
-
-**What it is:** A variation of the ACK flag probe scan. The slide lists it under ACK scanning, with the command nmap -sA -ttl 100 -v. The real Nmap option is --ttl (verify), which sets the TTL (time to live) of the packets Nmap sends.
-
-**How it works (EC-Council explanation, verify):** The scanner sends ACK probes and looks at the TTL of the RST replies. A small TTL in the reply (below a boundary of 64) suggests an open port. A larger TTL suggests a closed port.
-
-```bash
-sudo nmap -sA --ttl 100 -v 10.10.1.11
-```
-
-> **ADDED CONTEXT:** The TTL-based and window-based ideas are courseware techniques. Nmap's own manual describes the ACK scan and the window scan, not a TTL scan, so treat the TTL rule as a theory fact for the exam and verify it before relying on it in a real test.
-
-#### TCP window scan (-sW)
-
-**What it is:** Like the ACK scan, but it reads the TCP window field of the RST replies. On some systems an open port returns a RST with a positive window size and a closed port returns a RST with window size 0.
-
-**How it works:**
-
-1. The scanner sends an ACK probe.
-2. RST with window above 0 = open.
-3. RST with window 0 = closed.
-4. No reply or ICMP unreachable = filtered.
-
-```bash
-sudo nmap -sW -v 10.10.1.11
-```
-
-**Limit:** It depends on an implementation detail of a minority of systems. On systems that do not behave this way, all ports look closed. Do not trust it alone.
-
-> **TRAP:** The slide prints the window scan as "nmap -sA -sW -v". The scan flag that matters is -sW. Remember: -sA = ACK scan, -sW = window scan.
-
-#### Idle scan, also IDLE/IPID header scan (-sI)
-
-**What it is:** A third-party, spoofed scan. The scanner never sends a packet to the target from its own IP address. Instead, it borrows an innocent "zombie" host, and reads the zombie's IP ID counter (the IPID header field) to learn what the target answered. The target sees the zombie as the scanner.
-
-- **Zombie:** an idle host with a predictable, incrementing IP ID. Older Windows hosts, some printers and embedded devices fit. Most modern systems randomize the IP ID, so they are poor zombies.
-- **IP ID (IPID):** a 16-bit number in the IP header that identifies a packet, used for fragment reassembly. Some hosts add 1 for every packet they send.
-
-**How it works (numbered steps):**
-
-1. The attacker sends a SYN/ACK to the zombie. The zombie replies RST with IP ID = n. The attacker records n.
-2. The attacker sends a SYN to the target with the zombie's address as the spoofed source.
-3. If the target's port is open, the target sends SYN/ACK to the zombie. The zombie did not start a connection, so it replies RST. This RST uses the next IP ID (n+1).
-4. If the port is closed, the target sends RST to the zombie. The zombie ignores a RST and sends nothing. The IP ID does not change.
-5. The attacker probes the zombie again. The reply has IP ID = n+2 if the port was open, or n+1 if it was closed or filtered.
-
-```text
- Attacker                Zombie                   Target
-    |--- 1 SYN/ACK -------->|                        |
-    |<-- RST  IPID=n -------|                        |
-    |--- 2 spoofed SYN  (source = Zombie) ---------->|
-    |                       |<--- 3 SYN/ACK ---------|  (port open)
-    |                       |---- RST  IPID=n+1 ---->|
-    |--- 4 SYN/ACK -------->|                        |
-    |<-- RST  IPID=n+2 -----|                        |
-```
-
-Rule: IP ID rises by 2 = port open. IP ID rises by 1 = port closed or filtered.
-
-**Command from the slide:**
-
-```bash
-sudo nmap -Pn -p- -sI ZOMBIE_IP TARGET_IP
-```
-
-- -Pn: skip host discovery, because pinging the target from your own IP would reveal you.
-- -p-: scan all 65535 ports.
-- -sI ZOMBIE_IP: use the idle scan with this zombie (optionally ZOMBIE_IP:PROBE_PORT).
-- TARGET_IP: the host to scan.
-
-**Why use it:** It is a blind scan. The target's logs show the zombie's IP, not the attacker's. It can also reveal trust relationships (rules that allow the zombie but block the attacker).
-
-**Limits:** It needs a suitable zombie, it is slow, and the network must allow spoofed packets to leave (no egress filtering).
-
-> **EXAM TIP:** Keywords "zombie", "IPID", "blind scan", "attacker's IP never seen by the target" -> idle scan, nmap -sI.
-
-#### UDP scan (-sU)
-
-**What it is:** UDP (User Datagram Protocol) has no handshake and no connection. The scanner sends a UDP datagram and watches for a reply.
-
-**How it works:**
-
-1. The scanner sends an empty (or protocol-specific) UDP datagram to the port.
-2. ICMP port unreachable (type 3, code 3) = closed.
-3. A UDP reply = open.
-4. No reply = open or filtered (the scanner cannot tell).
-5. Other ICMP unreachable errors = filtered.
-
-**Why it is slow:** Operating systems limit the rate of ICMP errors (Linux about one per second), so scanning 65535 UDP ports can take hours. Scan the common UDP ports only (53, 67, 69, 123, 137, 161, 500, 1900) or use --top-ports.
-
-```bash
-sudo nmap -sU -v 10.10.1.11
-sudo nmap -sU -p 53,161 10.10.1.11
-```
-
-**Sample output (illustrative):**
-
-```text
-PORT    STATE         SERVICE
-53/udp  open          domain
-123/udp open|filtered ntp
-161/udp open|filtered snmp
-```
-
-> **TRAP:** UDP scanning needs the UDP-specific flag -sU. A TCP scan (-sS) does not test UDP services such as DNS, SNMP, and TFTP. Many real breaches start on an ignored UDP port.
-
-#### SCTP scans: INIT (-sY) and COOKIE ECHO (-sZ)
-
-**What it is:** SCTP (Stream Control Transmission Protocol) is a transport protocol (IP protocol number 132) used for telephony signalling and some mobile network interfaces. It sets up an association with a four-way handshake: INIT, INIT-ACK, COOKIE-ECHO, COOKIE-ACK. The word "chunk" means one message part inside an SCTP packet.
-
-- **SCTP INIT scan (-sY):** the SCTP twin of the SYN scan. It sends an INIT chunk and never finishes the association.
-  - INIT-ACK back = open.
-  - ABORT back = closed.
-  - No reply or ICMP unreachable = filtered.
-- **SCTP COOKIE ECHO scan (-sZ):** sends a COOKIE ECHO chunk.
-  - Open port: silently drops it (no reply) -> open or filtered.
-  - Closed port: replies ABORT.
-  - It can pass simple filters that block only INIT chunks, but it cannot separate open from filtered.
-
-```bash
-sudo nmap -sY -v 10.10.1.11
-sudo nmap -sZ -v 10.10.1.11
-```
-
-> **EXAM TIP:** SCTP INIT = -sY (like SYN). SCTP COOKIE ECHO = -sZ (like the FIN or NULL scans, silence means open or filtered).
-
-#### SSDP scanning
-
-**What it is:** SSDP (Simple Service Discovery Protocol) is the discovery part of UPnP (Universal Plug and Play). Devices such as routers, cameras, smart TVs, and printers announce themselves over UDP port 1900. The multicast address is 239.255.255.250. The slide lists SSDP scanning in the tree but gives no command (ADDED CONTEXT below).
-
-**How it works:**
-
-1. The scanner sends an M-SEARCH request to UDP 1900.
-2. UPnP devices reply with their type, location URL, and server string.
-3. The attacker learns which devices exist and looks for UPnP flaws.
-
-```text
-M-SEARCH * HTTP/1.1
-HOST: 239.255.255.250:1900
-MAN: "ssdp:discover"
-MX: 2
-ST: ssdp:all
-```
-
-**ADDED CONTEXT: commands (verify script and module names).**
-
-```bash
-sudo nmap -sU -p 1900 --script upnp-info 10.10.1.0/24
-```
-
-In Metasploit, the module auxiliary/scanner/upnp/ssdp_msearch sends the same M-SEARCH request.
-
-**Why attackers care:** Exposed UPnP can let an attacker open ports on a router, and SSDP can be abused for reflection and amplification denial-of-service (Module 10).
-
-**Defense:** Disable UPnP on routers, block UDP 1900 at the perimeter, and keep device firmware current.
-
-#### IPv6 scanning (-6)
-
-**What it is:** Scanning hosts that use IPv6 addresses (128-bit, for example 2001:db8::10). The slide gives nmap -6 followed by the target IP or domain.
-
-**How it works:**
-
-1. Add -6 so Nmap uses IPv6.
-2. Give a single IPv6 address or a domain name that has an AAAA record.
-3. Nmap runs the chosen scan over IPv6.
-
-```bash
-nmap -6 2001:db8::10
-nmap -6 -sS -p 22,80,443 www.example.com
-```
-
-**ADDED CONTEXT:** IPv6 subnets are so large that a ping sweep of a /64 is not practical. Attackers find IPv6 hosts through DNS (AAAA records), local multicast (ping to ff02::1, the all-nodes address), or leaked logs. IPv6 is often less filtered than IPv4. ICMPv6 has no timestamp query, and Neighbor Discovery replaces ARP.
-
-**Real-world use (for the whole of 3.6):** A tester finds 4 live hosts. A SYN scan lists the open ports on each. An ACK scan against the firewall shows that only ports 80 and 443 pass. A UDP scan of the top ports finds an open SNMP service on port 161. Result: three exposures for the report.
-
-**Tools and commands used here:** Nmap and Zenmap (all scans), Hping3 (custom TCP/UDP probes), Metasploit (portscan modules), NetScanTools Pro.
-
-**AI angle (ADDED CONTEXT):** An LLM can translate "scan the top 100 UDP ports quietly and save XML" into sudo nmap -sU --top-ports 100 -T2 -oX out.xml. It can also summarize a long scan report. Example prompt: "Explain why this Nmap output shows open|filtered for every port and what scan I should try next." Check each flag against section 5.
-
-**Countermeasures and defense:**
-
-- Stateful firewall plus IDS rules that detect SYN, FIN, NULL, Xmas, and ACK scans.
-- Block unused ports and run only needed services.
-- Rate-limit and log ICMP unreachable messages and RST packets.
-- Run your own scans to check the rules (see 3.19).
+> **EXAM TIP:** "Firewall allows packets from well-known ports" + "-g" = source port manipulation.
 
 **EXAM FOCUS:**
 
-- How it is asked: "Which scan sets the FIN, PSH, and URG flags?" -> Xmas. "Which scan does not complete the three-way handshake?" -> SYN (half-open). "Which scan uses a zombie?" -> idle. "Which scan maps firewall rules?" -> ACK.
-- Keywords: "RFC 793", "no response means open" -> FIN, NULL, Xmas. "Windows answers RST to everything" -> these scans fail on Windows.
-- Trap: for UDP, a closed port gives ICMP port unreachable, and no reply means open or filtered. For TCP SYN, no reply means filtered. Keep the two straight.
-- Look-alike: -sS (TCP SYN) vs -sY (SCTP INIT). -sF (FIN) vs -sM (FIN+ACK). -sA (ACK) vs -sW (window).
+- How it is asked: "Which Nmap option sets the source port?" (-g or --source-port). "What weakness does source port manipulation exploit?" (firewall rules that trust well-known source ports).
+- Keywords: "manipulating actual port numbers with common port numbers", "HTTP, DNS, FTP", "-g".
+- Common trap: -g sets the SOURCE port. -p sets the DESTINATION ports to scan.
+- Look-alike: -g (source port) vs -p (ports to scan) vs --spoof-mac.
 
-**Memory trick:** Flag letters: "T for Three-way (connect), S for Syn, X for Xmas, F for Fin, N for Null, M for Maimon, A for Ack, W for Window, I for Idle, U for Udp, Y and Z for SCTP (the last letters in the alphabet)."
+**Memory trick:** "g = Go in as a Guest on port 80 (a trusted port)". "Source = where I come from. Port 80 is a friendly place to come from."
 
-### 3.7 Service Version Discovery
+### 3.20 IP Address Spoofing
 
-**What it is (simple words):** Service version detection helps attackers obtain information about the running services and their versions on a target system. Knowing the exact version number lets an attacker decide whether the system is vulnerable to a particular exploit. In Zenmap (the Nmap graphical front end), the -sV option detects service versions.
+**What it is (simple words):** IP spoofing means changing the source IP address of your packets so the attack appears to come from someone else. The slide gives three facts. When the victim replies, the reply goes back to the spoofed address, not to the attacker's real address. Attackers modify the address information in the IP packet header (the source address field) to bypass the IDS or firewall. And the slide's note: you will not be able to complete the three-way handshake and open a successful TCP connection with spoofed IP addresses.
 
-- **Service version:** the product name and release of the program behind a port, for example "Microsoft IIS httpd 10.0".
-- **Exploit:** code that takes advantage of a known weakness in a specific software version.
-- **Zenmap:** the official graphical interface for Nmap. It runs the same scans and shows the results in tabs.
+**Analogy:** You write a letter and put a false return address on the envelope. The receiver's answer goes to the false address. You never read it. That is fine if you only wanted to send a message, not to hold a conversation.
 
-**Analogy:** An open port tells you there is a shop at address 80. Version detection reads the sign above the door: brand, model, and year. With the model number you can look up its known defects.
+**The slide example:** The command is shown as hping3 www.certifiedhacker.com -a 7.7.7.7. The attacker sends a packet with the spoofed address 7.7.7.7. The victim is shown as 5.5.5.5. The victim answers to 7.7.7.7, which is the real owner of that address.
+
+```text
+  Attacker ---- packet (src = 7.7.7.7) ----> Victim (5.5.5.5)
+                                                |
+  Real owner of 7.7.7.7 <---- reply -----------+
+  (the attacker never sees the reply)
+```
 
 **How it works (numbered steps):**
 
-1. A port scan finds the open ports.
-2. For each open port, Nmap sends probes and reads the greeting banner or the answer to a protocol request.
-3. Nmap compares the answer to its database of service signatures (nmap-service-probes).
-4. It prints the product, version, and sometimes OS and host name details.
-5. The attacker searches the version in a vulnerability database (Module 05) to find exploits.
+1. The attacker chooses the address to fake (an innocent host, a trusted internal host, or a random address).
+2. A crafting tool such as Hping3 writes that address into the source field of every packet.
+3. The packet travels to the victim. The firewall or IDS logs the fake address.
+4. The victim sends its reply to the fake address.
+5. The attacker does not see the reply unless he is on the path. So the handshake cannot be completed from his machine.
 
-**The screenshot (Zenmap with target 10.10.1.11 and command nmap -sV 10.10.1.11):**
+**Hping3 command breakdown:** hping3 is the program. www.certifiedhacker.com is the target. -a 7.7.7.7 (also written --spoof) sets the fake source address.
 
-```text
-Starting Nmap 7.94 ( https://nmap.org ) at 2024-03-11 23:35
-Nmap scan report for 10.10.1.11
-Host is up (0.0011s latency).
-Not shown: 994 closed tcp ports (reset)
-PORT     STATE SERVICE       VERSION
-21/tcp   open  ftp           Microsoft ftpd
-80/tcp   open  http          Microsoft IIS httpd 10.0
-135/tcp  open  msrpc         Microsoft Windows RPC
-139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
-445/tcp  open  microsoft-ds  Microsoft Windows 7 - 10 microsoft-ds
-                             (workgroup: WORKGROUP)
-3389/tcp open  ms-wbt-server Microsoft Terminal Services
-MAC Address: 00:15:5D:01:80:00 (Microsoft)
-Service Info: Host: WINDOWS11; OS: Windows; CPE: cpe:/o:microsoft:windows
+**What spoofing is good for:**
 
-Service detection performed. Please report any incorrect results at
-https://nmap.org/submit/ .
-Nmap done: 1 IP address (1 host up) scanned in 46.55 seconds
-```
+- Hiding the attacker's identity in logs.
+- Bypassing rules that trust certain IP addresses (IP-based authentication).
+- Denial of service: floods from random fake sources, or reflection attacks where replies go to the victim (Module 10).
+- Blind scans such as idle scan (3.11).
+- Decoy scanning (3.25).
 
-Some version strings and the date are small in the screenshot [UNCLEAR on page 3]; the values above are the best reading.
+**Blind and non-blind spoofing (ADDED CONTEXT):** In blind spoofing the attacker is on a different network and cannot see replies. He may guess the TCP sequence numbers to inject data. In non-blind spoofing the attacker is on the same segment and can see the replies, so session hijacking is possible (Module 11).
 
-Line by line:
+**Real-world use:** An attacker sends SYN packets to a server with the source forged as the company's own admin PC (10.10.1.5). The firewall allows traffic from that address. The attacker uses it to probe internal ports. Ingress filtering would drop it (3.30).
 
-- The new VERSION column is what -sV adds. Compare with the plain SYN scan, which only shows the service name.
-- "Microsoft IIS httpd 10.0" tells the attacker the web server is IIS 10.0, so the OS is Windows 10, 11, or Server 2016 or later.
-- "Service Info: Host ... OS: Windows; CPE ..." is a summary of what Nmap learned. CPE (Common Platform Enumeration) is a standard name format for products, here the Microsoft Windows OS.
-- The scan took 46.55 seconds instead of 1.65 seconds, because Nmap sent extra probes to each open port. Version detection is slower and noisier than a plain port scan.
+**Tools:** Hping3 -a, Hping3 --rand-source (random source for each packet, verify), Nmap -S (spoof source address) with -e (interface) and -Pn (ADDED CONTEXT), Colasoft Packet Builder, Scapy.
 
-**ADDED CONTEXT: related options.**
+**Countermeasures and defense:** The full list is in 3.30: encryption, multiple firewalls, no IP-based authentication, random initial sequence numbers, ingress filtering, egress filtering.
 
-| Option | Meaning |
+> **TRAP:** Spoofing does not give the attacker a working TCP connection. Without seeing the SYN/ACK he cannot send the final ACK. That is why it suits scans, floods, and one-way attacks.
+
+**EXAM FOCUS:**
+
+- How it is asked: "Which technique changes the source IP so the attack looks like it came from another host?" (IP spoofing). "Which tool is used to spoof an IP in the slide example?" (Hping3 -a).
+- Keywords: "appears to be coming from someone else", "reply goes to spoofed address", "source address bits".
+- Common trap: IP spoofing vs MAC spoofing. IP spoofing changes Layer 3. MAC spoofing changes Layer 2 (3.26).
+- Look-alike: IP spoofing vs IP decoy. In a decoy scan the real IP is also in the mix. In pure spoofing it is replaced.
+
+**Memory trick:** "-a = Alias address". "Spoof the Source, but the Sequel (reply) goes to the Stranger."
+
+### 3.21 Creating Custom Packets
+
+**What it is (simple words):** Attackers build their own TCP packets with packet crafting tools. They choose every field in the headers (flags, ports, TTL, checksum, options). The slide says attackers create custom TCP packets using tools such as Colasoft Packet Builder and NetScanTools Pro to scan a target beyond a firewall.
+
+**Analogy:** A normal scanner is a ready-made key. A packet crafter is a locksmith workshop. You cut the key to the exact shape the lock needs.
+
+**How it works (numbered steps):**
+
+1. The attacker studies the firewall (for example, which flags and ports it allows).
+2. In the packet builder he sets the protocol, addresses, ports, flags, TTL, and payload.
+3. He sends the packet once or in a batch.
+4. He reads the reply (or the silence) and adjusts the next packet.
+
+**Colasoft Packet Builder (page 6 screenshot):** A Windows tool for creating and editing packets. The screenshot shows these parts:
+
+| Part | Meaning |
 | --- | --- |
-| -sV | Probe open ports to find service and version |
-| --version-intensity 0-9 | How hard to probe (default 7) |
-| --version-light / --version-all | Intensity 2 / intensity 9 |
-| -O | Guess the OS (see 3.8, 3.13) |
-| -A | Aggressive: -sV, -O, -sC scripts, and traceroute |
+| Menu and toolbar | Import, Export, Add, Insert, Copy, Delete |
+| Checksum, Send, Send All | Fix checksums, send one or all packets |
+| Decode Editor | Edit each header field (Ethernet, IP, TCP, and others) |
+| Packet List | The packets queued for sending |
+| Hex Editor | Edit the raw bytes |
 
-**Real-world use:** A scan shows port 21 open. Version detection says "vsftpd 2.3.4". The tester knows this release contained a backdoor and reports a critical finding at once.
+The sample packet in the screenshot is a template with an Ethernet header and an ARP section. [UNCLEAR on page 6]: field values are small. You do not need them for the exam.
 
-**Tools and commands used here:** Nmap -sV, Zenmap. Related: Netcat and Telnet (banner grabbing, section 5).
+**NetScanTools Pro:** Named on this slide and on the overview slide. It includes packet generation tools as well as ping and port scanners.
 
-**AI angle (ADDED CONTEXT):** Paste the VERSION column into an LLM and ask: "List the known CVEs for each of these versions and rank them by exploitability." Treat the answer as a lead, not proof. LLMs can invent CVE numbers, so confirm each one in the NVD (National Vulnerability Database).
+**A simple custom packet with Scapy (ADDED CONTEXT):**
 
-**Countermeasures and defense:** Remove or edit version banners (for example, ServerTokens Prod in Apache, remove the IIS Server header), patch services, and block unused ports.
+```python
+from scapy.all import IP, TCP, sr1
+
+pkt = IP(dst="10.10.1.11") / TCP(dport=80, flags="F")
+reply = sr1(pkt, timeout=2)
+print(reply.summary() if reply else "no reply (open or filtered)")
+```
+
+Line 3 builds an IP packet to 10.10.1.11 with a TCP layer that sets only the FIN flag. Line 4 sends it and waits for one reply. Line 5 prints the reply, or says there was none. This is a hand-made FIN scan of one port.
+
+**AI angle (ADDED CONTEXT):** An AI assistant can write such scripts. Example prompt: "Write a Scapy script that sends a TCP packet with only the FIN flag to port 80 of 10.10.1.11 and prints the reply. This is for an authorized lab test." The attacker side uses this to create new probe types faster. The defender side uses it to test whether the firewall drops odd packets.
+
+**Real-world use:** A firewall blocks all packets with SYN but passes packets that belong to "established" connections. The tester crafts an ACK-only packet to map which ports respond.
+
+**Tools:** Colasoft Packet Builder, NetScanTools Pro, Hping3, Scapy, Nping, Nemesis, and Ostinato (the last four are ADDED CONTEXT).
+
+**Countermeasures and defense:** A stateful firewall drops packets that do not fit a known connection. Deep packet inspection and an IDS flag malformed or odd packets. Test your own firewall with the same tools.
 
 **EXAM FOCUS:**
 
-- How it is asked: "Which Nmap option detects the versions of running services?" -> -sV. "Why do attackers detect service versions?" -> to find vulnerabilities and exploits for those versions.
-- Keywords: "VERSION column", "Zenmap" -> -sV.
-- Trap: -sV is not -sS. -sV needs open ports first and then adds probes. -O is for the OS. -A includes both.
+- How it is asked: "Which tool creates custom TCP packets to scan beyond a firewall?" (Colasoft Packet Builder).
+- Keywords: "packet crafting", "custom TCP packets", "packet builder".
+- Common trap: Wireshark reads packets. Colasoft Packet Builder creates packets. Hping3 and Scapy do both on the command line.
+- Look-alike: Colasoft Packet Builder (create packets) vs Colasoft Ping Tool (ping many hosts).
 
-**Memory trick:** "-sV = Service Version. -O = Operating system."
+**Memory trick:** "Builder builds. Wireshark watches."
 
-### 3.8 How to Identify Target System OS
+### 3.22 OS Discovery and Banner Grabbing
 
-**What it is (simple words):** Attackers can identify the OS running on the target machine by looking at the Time To Live (TTL) and the TCP window size in the IP header of the first packet in a TCP session. This is a passive way to guess the OS, because it only reads values the target already sends, with no extra probes beyond a normal connection.
+**What it is (simple words):** Banner grabbing, also called OS fingerprinting, is the method used to find out which operating system runs on a remote target. A banner is the short text a service shows about itself when you connect (name and version). The slide says there are two types: active and passive. Knowing the OS lets the attacker figure out the vulnerabilities of the system and the exploits that might work, so he can carry out further attacks.
 
-- **TTL (Time To Live):** a counter in the IP header that drops by 1 at every router. Different operating systems start it at different default values.
-- **TCP window size:** the amount of data (in bytes) a host says it can accept before it must be acknowledged. Operating systems set different default window sizes.
-- **Packet sniffing:** capturing network traffic as it passes, without sending anything new to the target.
+**Analogy:** Active banner grabbing is asking a stranger, "What company do you work for?" Passive banner grabbing is reading the badge on his jacket without speaking.
 
-**Analogy:** Different car brands drive off the factory line with different default radio volume and mirror angle settings. If you measure those two settings on a passing car, you can guess the brand even without reading the badge.
+**Active banner grabbing (slide):**
 
-**How it works (numbered steps):**
+1. Specially crafted packets are sent to the remote OS and the responses are noted.
+2. The responses are compared with a database to determine the OS.
+3. Responses from different operating systems vary because of differences in the TCP/IP stack implementation.
 
-1. The attacker captures (sniffs) the response generated from the target machine using a packet-sniffing tool such as Wireshark.
-2. He looks at the first packet of a TCP session from the target (usually the SYN/ACK reply).
-3. He reads the TTL field and the TCP window size field in that packet.
-4. He compares both values against a reference table of known OS defaults.
-5. He picks the OS whose defaults match most closely. This is a guess, not a certainty, because TTL drops with every hop and some systems let administrators change the defaults.
+**Passive banner grabbing (slide):**
 
-**Window size values for OS (from the slide):**
+1. **Banner grabbing from error messages:** Error messages give information such as server type, type of OS, and the SSL tool used by the target remote system.
+2. **Sniffing the network traffic:** Capturing and analyzing packets from the target lets the attacker determine the OS (this is the Wireshark method in 3.17).
+3. **Banner grabbing from page extensions:** Looking at the extension in the URL can show the application version. Example from the slide: .aspx => IIS server and Windows platform.
 
-| Operating system | Time to live | TCP window size |
+The slide note says passive banner grabbing is discussed in later modules (hacking web servers, Module 13).
+
+**Comparison:**
+
+| Feature | Active | Passive |
 | --- | --- | --- |
-| Linux | 64 | 5840 |
-| FreeBSD | 64 | 65535 |
-| OpenBSD | 255 | 16384 |
-| Windows | 128 | 65,535 bytes to 1 Gigabyte |
-| Cisco Routers | 255 | 4128 |
-| Solaris | 255 | 8760 |
-| AIX | 255 | 16384 |
+| Sends packets to target | Yes | No |
+| Can be detected | Yes, by the target | Very hard to detect |
+| Speed and accuracy | Fast, usually more accurate | Slower, depends on traffic seen |
+| Examples | Nmap -O, Telnet, Netcat | Wireshark, p0f, error pages |
 
-The Windows window size entry is wide ("65,535 bytes to 1 Gigabyte") because modern Windows versions use TCP window scaling, which lets the effective window grow far beyond the 16-bit header field through a scaling factor (ADDED CONTEXT).
+**Examples of banners (ADDED CONTEXT):**
 
-**Screenshot on the slide:** two Wireshark captures side by side. The left one is labeled "Possible OS is Windows" and the right one "Possible OS is Linux". The highlighted fields in each capture are the TTL and window size inside the IP and TCP headers of a captured packet. The exact byte values shown in each capture are too small to read with confidence [UNCLEAR on page 4]; the reference table above gives the values to compare against.
-
-**ADDED CONTEXT: how to read it in Wireshark.** Open a capture, click a SYN or SYN/ACK packet from the target, expand "Internet Protocol Version 4" to find "Time to live", and expand "Transmission Control Protocol" to find "Window size value" (and "Calculated window size" if scaling is used). Compare both numbers to the table.
+An error page (passive, from a normal browser visit):
 
 ```text
-Internet Protocol Version 4, Src: 10.10.1.11
-    Time to live: 128              <-- matches Windows
-Transmission Control Protocol, Src Port: 80
-    Window size value: 8192
-    [Calculated window size: 65535]
+Not Found
+The requested URL /abc was not found on this server.
+Apache/2.4.41 (Ubuntu) Server at example.com Port 80
 ```
 
-A TTL of 128 strongly suggests Windows. A TTL of 64 suggests Linux or FreeBSD; the window size then tells them apart (5840 leans Linux, 65535 leans FreeBSD).
+This footer tells the attacker the web server is Apache 2.4.41 on Ubuntu Linux.
 
-> **TRAP:** The TTL you observe is the target's starting TTL minus the number of router hops in between, not the raw starting value. A captured TTL of 118 from a Windows host 10 hops away still points to a 128 start (118 is close to 128, and router hops subtract small whole numbers). If the captured value does not match any row closely, assume several hops have already reduced it and compare the "closest higher" default instead of expecting an exact match.
+A manual connection with Netcat (active):
 
-**Real-world use:** A tester captures a reply with TTL 128 and window size 8192. She concludes the target is Windows and chooses Windows-specific enumeration tools and exploits for the next phase.
+```bash
+nc -v 10.10.1.11 80
+HEAD / HTTP/1.0
+```
 
-**Tools and commands used here:** Wireshark (capture and inspect), tcpdump (command-line capture), Nmap -O (active OS fingerprinting, ADDED CONTEXT, covered in 3.13 alongside banner grabbing).
+```text
+HTTP/1.1 200 OK
+Server: Microsoft-IIS/10.0
+X-Powered-By: ASP.NET
+```
 
-**AI angle (ADDED CONTEXT):** An LLM can read a short list of TTL and window values and suggest the most likely OS, citing the same kind of reference table. Example prompt: "A captured packet has TTL 117 and TCP window 8192. Which OS is the host most likely running, and why?" Treat the answer as a lead to confirm with a second method (banner grabbing or -sV).
+You type the HEAD line and press Enter twice. The Server header names IIS 10.0 and the X-Powered-By header names ASP.NET, so the host is Windows.
 
-**Countermeasures and defense:** Normalize or randomize TTL and window size at the firewall or load balancer so OS fingerprints do not leak; keep systems patched regardless of what an attacker guesses.
+Page extension hints: .aspx means ASP.NET on IIS (Windows). .php means PHP (often Linux). .jsp means Java. .cfm means ColdFusion.
+
+**How active OS detection works inside Nmap (ADDED CONTEXT):** The switch is nmap -O. Nmap sends about a dozen special TCP, UDP, and ICMP probes. It measures the initial TTL, the window size, TCP option order, the Don't Fragment bit, and how the stack answers odd packets. It compares the results with a database of fingerprints. Related switches: --osscan-guess (guess when no perfect match), --osscan-limit (only try hosts with open and closed ports found), and -A (OS, version, scripts, traceroute).
+
+**Real-world use:** A tester sees IIS 10.0 in a header and .aspx in the URLs. She concludes Windows Server and checks Windows and IIS exploits first. A different tester sees "Apache/2.4.41 (Ubuntu)" and moves to Linux checks.
+
+**Tools:** Nmap -O, Telnet, Netcat, curl -I, Wireshark, p0f, Xprobe2, ID Serve (the last four are ADDED CONTEXT; verify any tool you plan to use), Netcraft for web servers (Module 02).
+
+**AI angle (ADDED CONTEXT):** The v13 course shows AI tools such as ShellGPT for OS discovery. Example prompt: "Give me an Nmap command to guess the OS of 10.10.1.11 and also detect service versions." Answer: sudo nmap -O -sV 10.10.1.11 (or nmap -A). An AI assistant can also read a banner and explain what it means. The tester must still confirm the guess with a second method.
+
+**Countermeasures and defense (ADDED CONTEXT):**
+
+- Remove or change service banners (for example Apache ServerTokens Prod and ServerSignature Off; remove the X-Powered-By header on IIS).
+- Use custom error pages that show no server details.
+- Hide or change file extensions (use clean URLs).
+- Place a reverse proxy or WAF in front of servers.
+- Patch systems so a known OS and version does not matter.
+
+> **EXAM TIP:** Both words are the same thing on the slide: "banner grabbing or OS fingerprinting". Two types: active and passive.
+
+> **TRAP:** Sniffing network traffic is a passive method, even though the attacker may be actively watching.
 
 **EXAM FOCUS:**
 
-- How it is asked: "A captured packet shows TTL 255 and a small window size. Which operating systems are the most likely candidates?" -> Cisco, Solaris, OpenBSD, or AIX (all use TTL 255; the window size picks among them).
-- Keywords: "TTL and TCP window size", "first packet in a TCP session" -> this passive OS-guessing technique.
-- Trap: TTL 64 fits both Linux and FreeBSD. You need the window size (5840 vs 65535) to separate them.
-- Look-alike: this passive method (reading TTL and window from a normal reply) vs active banner grabbing (section 3.13), which sends crafted packets on purpose to provoke a telling response.
+- How it is asked: "Which is an example of passive banner grabbing?" (error messages, sniffing, page extensions). "Which is active?" (sending crafted packets and comparing responses to a database).
+- Keywords: ".aspx", "error messages", "crafted packets", "TCP/IP stack differences", "database".
+- Common trap: Active methods can be logged by the target. Passive methods leave no trace on the target.
+- Look-alike: banner grabbing (services and OS) vs service version discovery (-sV). They overlap. The slide treats banner grabbing as OS focused.
 
-**Memory trick:** "Windows is 128, everyone big (255) looks alike, Linux and FreeBSD share 64." -> Windows=128; {Cisco, Solaris, OpenBSD, AIX}=255; {Linux, FreeBSD}=64.
+**Memory trick:** "Passive = Peek (errors, sniffing, extensions). Active = Ask (crafted packets)." Three passive items: "E-S-E" = Errors, Sniffing, Extensions.
 
-### 3.9 Packet Fragmentation
+### 3.23 Scanning Beyond IDS and Firewall (Overview of Evasion Techniques)
 
-**What it is (simple words):** Packet fragmentation refers to the splitting of a probe packet into several smaller packets (fragments) while sending it to a network. It is not a new scanning method; it is a modification of the previous scanning techniques (SYN, FIN, and the rest). The TCP header itself is split across several IP fragments, so simple packet filters cannot see the complete header and cannot tell what the packets are intended to do.
+**What it is (simple words):** Firewalls and IDSs can stop malicious packets from entering a network. The slide says attackers can still manage to send their intended packets to the target by evading the IDS or firewall with ten techniques.
 
-- **IP fragment:** a piece of an original IP packet. The receiving host's IP stack reassembles the fragments before handing the data up to TCP.
-- **Packet filter:** a simple firewall that checks fields in a packet header against rules. Many older or simpler filters inspect only the first fragment, or cannot reassemble fragments at all.
+- **Firewall:** a device or program that allows or blocks traffic by rules (addresses, ports, protocols, connection state).
+- **IDS (Intrusion Detection System):** a system that watches traffic and raises alerts when it sees an attack pattern. An IPS (Intrusion Prevention System) also blocks it. Module 12 covers both in depth.
 
-**Analogy:** Instead of mailing one envelope that clearly says "invoice", you tear the letter into three strips and mail each strip separately. A guard who only reads whole envelopes at the gate cannot tell what the strips add up to until they are taped back together on the other side.
+**Analogy:** A building has a guard (firewall) and a camera room (IDS). The ten techniques are ten ways to fool them: wear a disguise, come in many small pieces, use a side entrance, go with a crowd, or send someone else.
 
-**How it works (numbered steps):**
+**The ten techniques on the slide:**
 
-1. The attacker chooses a normal scan type, for example a SYN or FIN scan.
-2. Instead of sending each probe as one full packet, the tool splits the IP packet into small fragments (commonly 8 or 16 bytes of data per fragment, with an offset field that tells the receiver how to reassemble them).
-3. A simple, non-stateful firewall or IDS sees only tiny, incomplete pieces and may pass them through without matching any rule.
-4. The target's own IP stack reassembles the fragments into the original TCP header and processes the probe normally.
-5. The target answers the probe as it would for any unfragmented packet: RST if closed, SYN/ACK if open (for a SYN probe), and so on, following the same reply logic as the base scan type.
-
-**SYN/FIN scanning using IP fragments (diagram on the slide):**
-
-```text
-   Attacker                                    Target
-      |                                           |
-      |-- SYN/FIN (small IP fragments) + port n ->|
-      |                                           |
-      |<---- RST (if port is closed) -------------|
-```
-
-The diagram shows the attacker sending a SYN or FIN probe to port n, broken into small IP fragments. If the port is closed, the target reassembles the fragments and answers RST, exactly as an unfragmented SYN or FIN scan would.
-
-**Command (from the Zenmap screenshot, best reading [UNCLEAR on page 4]; standard Nmap syntax below):**
-
-```bash
-sudo nmap -f -v 10.10.1.11
-sudo nmap -f -sS -v 10.10.1.11
-sudo nmap --mtu 24 -sS -v 10.10.1.11
-```
-
-- -f: fragment packets (8 bytes of data per fragment after the header).
-- -f -f (or -ff): use smaller fragments still (16-byte offsets, verify).
-- --mtu NUMBER: set a custom fragment size, must be a multiple of 8.
-
-The Zenmap screenshot on the slide shows a scan result with a fragmentation-related warning banner at the top of the output panel; the exact warning text is too small to read reliably [UNCLEAR on page 4]. A typical Nmap warning in this situation reads: "WARNING: Fragmentation (-f or --mtu) breaks OS detection and version scanning. It will likely cause issues with other scan types too."
-
-**Sample output (illustrative):**
-
-```text
-Starting Nmap 7.94 ( https://nmap.org ) at 2024-03-12 00:45
-WARNING: Fragmentation (-f) breaks OS detection and version
-scanning.
-Nmap scan report for 10.10.1.11
-Host is up (0.00061s latency).
-Not shown: 994 closed tcp ports (reset)
-PORT     STATE SERVICE
-21/tcp   open  ftp
-80/tcp   open  http
-135/tcp  open  msrpc
-139/tcp  open  netbios-ssn
-445/tcp  open  microsoft-ds
-3389/tcp open  ms-wbt-server
-Nmap done: 1 IP address (1 host up) scanned in 20.14 seconds
-```
-
-How to read it: the result looks the same as a normal SYN scan (same six open ports), but the scan took much longer because each probe is now several small packets instead of one, and the warning confirms that fragmentation was active and may interfere with other detection features.
-
-**Real-world use:** A tester finds that a plain SYN scan against a segment returns nothing (every port filtered), because a simple packet filter drops anything that looks like a scan signature. A fragmented SYN scan (-f) against the same segment gets through, because the filter only inspects whole, unfragmented packets.
-
-**Tools and commands used here:** Nmap (-f, --mtu), Colasoft Packet Builder and NetScanTools Pro (manual fragment crafting, see 3.12), Hping3 (--frag, ADDED CONTEXT).
-
-**AI angle (ADDED CONTEXT):** Ask an LLM: "My SYN scan against 10.10.1.0/24 returns all ports filtered, but the hosts answer ping. Suggest Nmap options that might get through a simple packet filter, and explain the risk of fragmentation to other features of the scan." A reasonable answer includes -f and a note that it conflicts with -O and -sV. Fragmentation can also crash poorly written IDS or firewall software, so only use it in an authorized test.
-
-**Countermeasures and defense:** Use a stateful firewall or IDS that reassembles fragments before inspecting them (most modern firewalls do this by default); drop or log unusual tiny fragments at the perimeter; keep firewall and IDS firmware current (also listed in 3.19).
-
-**EXAM FOCUS:**
-
-- How it is asked: "Which evasion technique splits a probe packet into several smaller packets so a packet filter cannot see the complete header?" -> packet fragmentation.
-- Keywords: "split the TCP header across packets", "not a new scan, a modification" -> fragmentation.
-- Trap: fragmentation is not its own scan type. It is applied on top of an existing scan (SYN, FIN, and so on). A question that asks "which scan type is this" when fragmentation is mentioned should still point to the underlying scan (SYN, FIN) plus the evasion flag.
-- Look-alike: packet fragmentation (splits one packet into pieces) vs source port manipulation (3.10, changes which port the packet appears to come from) vs IP decoy (3.16, adds fake source IPs). All three are evasion techniques from the same list (3.14), but they change different things.
-
-**Memory trick:** "Fragment it like a torn letter: the guard cannot read a torn strip, but the mailbox tapes it back together."
-
-### 3.10 Source Port Manipulation
-
-**What it is (simple words):** Source port manipulation refers to manipulating the actual port number used by the scanner with a common, trusted port number, in order to evade an IDS or firewall. It works because a firewall is often configured to allow packets that come from well-known ports, such as HTTP (80), DNS (53), or FTP (21), on the assumption that only a real server on that port would use it as a source.
-
-- **Source port:** the port number a sender puts in its own outgoing packet, normally a random high (ephemeral) port chosen by the OS.
-- **Trusted port rule:** a firewall rule that allows traffic because it appears to come from a well-known service port, rather than checking what the traffic actually is.
-
-**Analogy:** A guard at a gate waves through any van that has "Electric Company" painted on the side, without checking who is driving or what is inside. An attacker paints the same logo on his own van (uses port 80 as his source) and drives straight through.
-
-**How it works (numbered steps):**
-
-1. The attacker identifies a well-known port the firewall is likely to trust as a source, such as 80, 53, or 20/21.
-2. He sets his scanner's source port to that number instead of a random high port.
-3. The firewall checks the packet's source port, sees a trusted number, and allows the packet through to the target.
-4. The target processes the probe normally and replies according to the scan type being used (SYN, ACK, and so on).
-
-**Diagram on the slide:**
-
-```text
-                      +-----------+
-   Actual Port 242    | Firewall  |      Port 242 BLOCKED (X)
-      Attacker ------>|           |
-   Manipulated Port 80 | allows   |---> Port 80 ALLOWED -> Victim
-                       | port 80  |
-                      +-----------+
-```
-
-The firewall is configured to allow manipulated port 80 traffic through to the victim, while a probe that honestly uses port 242 as its source is blocked.
-
-**Command (Nmap uses -g or --source-port):**
-
-```bash
-sudo nmap -g 80 -sS -v 10.10.1.11
-sudo nmap --source-port 53 -sU -v 10.10.1.11
-```
-
-- -g PORT or --source-port PORT: force Nmap to send every probe from the given source port number.
-- Common choices: 20 (FTP data), 53 (DNS), 67 (DHCP server), 88 (Kerberos), 80 (HTTP), 443 (HTTPS).
-
-**Sample output (as seen in the module's screenshot, shortened):**
-
-```text
-Starting Nmap 7.94 ( https://nmap.org ) at 2024-03-12 00:53
-Nmap scan report for 10.10.1.11
-Host is up (0.0004s latency).
-Not shown: 994 closed tcp ports (reset)
-PORT     STATE SERVICE
-21/tcp   open  ftp
-80/tcp   open  http
-135/tcp  open  msrpc
-139/tcp  open  netbios-ssn
-445/tcp  open  microsoft-ds
-3389/tcp open  ms-wbt-server
-MAC Address: 00:15:5D:01:00:00 (Microsoft)
-Nmap done: 1 IP address (1 host up) scanned in 1.65 seconds
-```
-
-How to read it: the result is the same six open ports as a plain SYN scan. The source-port trick does not change what the scanner finds; it changes whether the firewall lets the probes through at all, which matters when the firewall normally blocks traffic from the scanner's usual source port range.
-
-**Real-world use:** A tester's SYN scan against a segment is fully blocked (every port filtered), because the firewall drops traffic from high, non-standard source ports. Re-running the same scan with -g 53 (pretending to be DNS traffic) gets through, revealing six open ports that were otherwise hidden.
-
-**Tools and commands used here:** Nmap (-g, --source-port), Hping3 (-s or --baseport for a fixed source port, ADDED CONTEXT), Colasoft Packet Builder and NetScanTools Pro (manual crafting, see 3.12).
-
-**AI angle (ADDED CONTEXT):** Ask an LLM: "My scan of 10.10.1.0/24 is fully blocked. The firewall likely trusts DNS and HTTP traffic. Give me Nmap commands that try spoofing the source port to 53 and to 80, and explain the -g flag." A good answer names -g (or --source-port) and warns that this only works if the firewall's rule genuinely keys off the source port rather than deeper packet inspection.
-
-**Countermeasures and defense:** Configure firewall and router rules so that trust is never based on the source port alone (see port scanning countermeasure 3 in 3.19); use stateful inspection that tracks real connections rather than simple port-based allow rules; keep firmware updated.
-
-**EXAM FOCUS:**
-
-- How it is asked: "An attacker scans using source port 53 to bypass a firewall rule. What is this technique called?" -> source port manipulation.
-- Keywords: "firewall configured to allow packets from well-known ports", "-g or --source-port" -> source port manipulation.
-- Trap: this technique manipulates the scanner's own source port, not the destination port being probed. Do not confuse it with simply scanning port 80 as a target.
-- Look-alike: source port manipulation (fakes the sender's port number) vs IP address spoofing (3.11, fakes the sender's IP address) vs MAC address spoofing (3.17, fakes the sender's hardware address). All three forge a different field of the same packet.
-
-**Memory trick:** "-g for Gatecrash: walk in wearing the guard's own uniform (port 80, 53, or 21)."
-
-### 3.11 IP Address Spoofing
-
-**What it is (simple words):** IP spoofing refers to changing the source IP address of outgoing packets so that the attack appears to be coming from someone else. When the victim replies, the reply goes back to the spoofed address, not to the attacker's real address. Attackers modify the address information and the source address bits in the IP packet header in order to bypass an IDS or firewall that trusts, blocks, or logs by source IP.
-
-- **Spoofed address:** a fake source IP address placed in the packet header, not the sender's real address.
-- **Reflected reply:** any answer the victim sends goes to the spoofed address instead of the real sender, so the real attacker never sees it directly (unless the spoofed address belongs to him or to a victim he is attacking with the reply, as in a reflection attack, Module 10).
-
-**Analogy:** Sending a nasty letter and writing a neighbor's return address on the envelope. If the recipient replies, the reply lands on the neighbor's doorstep, not the real sender's.
-
-**How it works (numbered steps):**
-
-1. The attacker picks a fake source IP address to put in his outgoing packets.
-2. He crafts and sends packets (often with a tool such as Hping3) using that fake address as the source.
-3. The target (victim) believes the packets came from the fake address and may log, block, or reply to that address instead of the real attacker.
-4. Any reply from the victim goes to the spoofed address, so the attacker normally cannot see the reply in a basic spoofing attack. This is why spoofing is mostly used for one-way attacks (flooding, evading IP-based access rules, reflection) rather than for scans that need to read back a result.
-
-**Diagram on the slide (illustrative world map with arrows):**
-
-```text
-    Attacker                                   Victim IP
-   (sends packet,                              address
-    spoofed source                             5.5.5.5
-    = 7.7.7.7)   ------------------------------>
-                                      Reply appears to come
-                                      from / go to 7.7.7.7
-```
-
-[UNCLEAR on page 5]: the diagram labels both the spoofed address box and a "Real address" box as 7.7.7.7, which is inconsistent as drawn; the most consistent reading is that 7.7.7.7 is the spoofed address the attacker inserts into the packet, the victim's own address is 5.5.5.5, and the "real address" label marks where the spoofed identity 7.7.7.7 actually belongs on the map (i.e., to a third party, not to the attacker). Treat the key fact as: the attacker's packets claim to come from 7.7.7.7, and the victim is 5.5.5.5; any reply from the victim is sent to 7.7.7.7, not to the attacker.
-
-**Command (Hping3 example from the slide):**
-
-```bash
-hping3 www.certifiedhacker.com -a 7.7.7.7
-```
-
-- hping3: the packet-crafting and scanning tool.
-- www.certifiedhacker.com: the target host.
-- -a 7.7.7.7 (or --spoof 7.7.7.7): set the source IP address field to 7.7.7.7 instead of the attacker's real IP.
-
-**ADDED CONTEXT: a fuller Hping3 spoofing example and reading it.**
-
-```bash
-sudo hping3 -c 5 -S -p 80 -a 7.7.7.7 www.certifiedhacker.com
-```
-
-- -c 5: send 5 packets.
-- -S: set the SYN flag (acts like a simple SYN probe).
-- -p 80: target port 80.
-- -a 7.7.7.7: spoof the source address as 7.7.7.7.
-
-```text
-HPING www.certifiedhacker.com (eth0 162.241.216.11): S set,
-40 headers + 0 data bytes
-len=46 ip=162.241.216.11 ttl=55 DF id=0 sport=80 flags=SA
-seq=0 win=8192 rtt=38.5 ms
-```
-
-Because the source address was spoofed to 7.7.7.7, the real reply (flags=SA, meaning SYN+ACK) is actually sent by the target to 7.7.7.7, not back to the attacker's own machine; the attacker normally would not see this line unless running the capture from the spoofed host itself or sniffing the path. In practice, most internet service providers filter obviously spoofed packets before they ever leave the attacker's network (see egress filtering in 3.20), so this technique mostly works on poorly secured or internal networks today.
-
-> **REMEMBER:** You will not be able to complete the three-way handshake and open a successful TCP connection with spoofed IP addresses. The victim's SYN/ACK goes to the spoofed address, which never sends the final ACK back to the real attacker (unless the attacker also controls or monitors the spoofed address). This is why IP spoofing is used for denial-of-service, reflection, and IDS or firewall evasion, not for scans that need a two-way answer.
-
-**Real-world use:** An attacker wants to flood a victim without revealing his own IP. He sends SYN packets with thousands of random spoofed source addresses. The victim's half-open connections pile up (a SYN flood, Module 10), and any logs or IDS alerts point to the fake addresses, not the attacker.
-
-**Tools and commands used here:** Hping3 (-a, --spoof), Nmap (-S, to set a spoofed source for certain scan types, ADDED CONTEXT), Colasoft Packet Builder and NetScanTools Pro (manual header editing, see 3.12).
-
-**AI angle (ADDED CONTEXT):** An LLM can explain why a spoofed scan will not return readable results to the attacker, and can write a safe lab-only Hping3 command for a test range you own. Example prompt: "Explain, for an authorized lab test, why I cannot read scan results back when I spoof the source IP with Hping3's -a option." A correct answer should mention that replies are routed to the spoofed address, not to you.
-
-**Countermeasures and defense:** See the dedicated IP Spoofing Countermeasures list in 3.20 (encrypt traffic, multiple firewalls, no IP-based authentication, random initial sequence numbers, ingress filtering, egress filtering).
-
-**EXAM FOCUS:**
-
-- How it is asked: "Why can an attacker not complete a TCP connection using a spoofed source IP address?" -> the SYN/ACK (and all further replies) go to the spoofed address, not to the attacker.
-- Keywords: "appears to be coming from someone else", "replies go back to the spoofed address" -> IP address spoofing.
-- Trap: IP spoofing changes the IP header's source address field. It is a different field from the source port (3.10) and the MAC address (3.17), even though all three are used together in real evasion attempts.
-- Look-alike: IP address spoofing (fake source IP, used for DoS, reflection, evasion) vs IP address decoy (3.16, adds many fake source IPs alongside the real scanning IP, specifically to hide which IP is the real scanner during a scan that still needs to receive replies).
-
-**Memory trick:** "Spoof the IP, lose the reply: the postman delivers the answer to the name on the envelope, not to the person who actually wrote the letter."
-
-### 3.12 Creating Custom Packets
-
-**What it is (simple words):** Attackers create custom TCP packets using various packet crafting tools, such as Colasoft Packet Builder and NetScanTools Pro, to scan a target beyond a firewall. Instead of relying on a scanner's built-in probe types, the attacker builds a packet byte by byte, setting any field (flags, TTL, checksum, source and destination addresses and ports) to exactly the value needed to slip past a specific filter rule.
-
-- **Packet crafting tool:** software that lets a user build a network packet field by field and send it, rather than generating it from a fixed scan template.
-- **Decode editor:** a view in a packet crafting tool that shows each protocol layer of a packet (Ethernet, IP, TCP) as an editable tree, so the user can change any single field.
-
-**Analogy:** A scanner such as Nmap is a vending machine with fixed buttons (SYN scan, UDP scan, and so on). A packet crafting tool is a workbench where the attacker builds a one-off packet from raw parts, choosing exactly which flags, addresses, and checksums to use, when no pre-built button does the job.
-
-**How it works (numbered steps):**
-
-1. The attacker opens a packet crafting tool and creates a new packet.
-2. He builds or edits each layer: Ethernet II (source and destination MAC), the network layer (ARP or IP, with TTL, flags, and addresses), and the transport layer (TCP or UDP, with ports, sequence numbers, and flags).
-3. He can use the checksum calculator in the tool to insert a valid (or deliberately invalid, see 3.18) checksum.
-4. He sends the single crafted packet, or adds several packets to a list and sends them all, to test exactly how the target or an in-between firewall reacts.
-
-**Screenshot on the slide (Colasoft Packet Builder):** the interface shows a toolbar (Import, Export, Add, Insert, Delete, Decode Editor, Send, Send All), a Decode Editor pane on the left listing Ethernet II, ARP/Internet Protocol, and transport-layer fields in an expandable tree, a Hex Editor pane at the bottom showing the raw bytes of the packet, and a Packet List pane on the right showing queued packets with a Send and a Send All button. The exact field values filled in on the slide are too small to read with confidence [UNCLEAR on page 6]; the layout described here is the general structure of the tool.
-
-**ADDED CONTEXT: other packet crafting tools the exam may name alongside these.** Scapy (a Python library and interactive tool for crafting and sending arbitrary packets at any protocol layer), hping3 (also a crafting tool, already used for spoofing in 3.11 and fragmentation in 3.9), and Ostinato (another GUI packet crafting and traffic generator). NetScanTools Pro bundles packet crafting together with many other network utilities (see section 4).
-
-**ADDED CONTEXT: a Scapy equivalent, to show what "custom packet" means in code.**
-
-```text
-from scapy.all import IP, TCP, send
-pkt = IP(dst="10.10.1.11", ttl=128) / TCP(
-    sport=4444, dport=80, flags="S")
-send(pkt)
-```
-
-This builds one IP packet with a custom TTL (128, to look like Windows) carrying a TCP SYN to port 80 from source port 4444, and sends it. Every field is explicit, which is the point of packet crafting: nothing is left to a scanner's default template.
-
-**Real-world use:** A tester's standard Nmap SYN scan is dropped by a firewall rule that matches Nmap's default packet signature. Using Colasoft Packet Builder, he crafts a SYN packet with a non-default TTL, window size, and TCP options order, which the same firewall rule does not match, and the probe reaches the target.
-
-**Tools and commands used here:** Colasoft Packet Builder, NetScanTools Pro, Scapy and hping3 (ADDED CONTEXT).
-
-**AI angle (ADDED CONTEXT):** An LLM can write a Scapy script from a plain description. Example prompt: "Write a Scapy script that sends a single TCP packet to 10.10.1.11 port 443 with the SYN flag, a TTL of 64, and a custom window size of 1024, for an authorized lab test." Read and understand every line before running it, since a crafted packet bypasses the safety checks of a normal scanner.
-
-**Countermeasures and defense:** Use a stateful firewall that validates packet structure and flag combinations rather than trusting a specific scanner's signature; keep firewall and IDS rule sets and firmware updated (also in 3.19) so they catch hand-built as well as tool-generated probes.
-
-**EXAM FOCUS:**
-
-- How it is asked: "Which technique lets an attacker build a packet field by field to bypass a firewall rule that blocks known scanner signatures?" -> creating custom packets with a packet crafting tool.
-- Keywords: "packet crafting tools", "Colasoft Packet Builder", "NetScanTools Pro" -> custom packet creation.
-- Trap: packet crafting is the general technique; fragmentation (3.9), source port manipulation (3.10), IP spoofing (3.11), and bad checksums (3.18) are all specific tricks that a packet crafting tool can also be used to perform. A question that names a specific trick wants that specific answer, not the general "custom packets" label.
-- Look-alike: packet crafting tools (build any packet from scratch) vs Nmap (runs pre-built scan templates, though several accept flags that imitate hand-crafting, such as -f, -g, -D, --badsum).
-
-**Memory trick:** "Colasoft builds from Scratch; Nmap picks from a Menu."
-
-### 3.13 OS Discovery / Banner Grabbing
-
-**What it is (simple words):** Banner grabbing, also called OS fingerprinting in this context, is the method used to determine the operating system running on a remote target system. There are two types of banner grabbing: active and passive. Identifying the OS used on the target host allows an attacker to figure out the vulnerabilities the system possesses and the exploits that might work on it, to carry out further attacks.
-
-- **Banner:** the short text a service sends when a client connects, often naming the product and version, for example "220 Microsoft FTP Service" on an FTP port.
-- **Fingerprinting:** identifying a product (here, an OS or service) from the distinctive pattern of its responses, the way a human fingerprint identifies a person.
-
-**Analogy:** Active banner grabbing is knocking on a door and listening carefully to how it creaks, then matching that creak to a catalog of door models. Passive banner grabbing is simply standing nearby and noting what the mail carrier calls out as he reads the name on each parcel, without knocking on anything yourself.
-
-**How it works, active banner grabbing (numbered steps):**
-
-1. The attacker sends specially crafted packets to the remote OS.
-2. He notes the exact responses: TTL, window size, TCP option order, how the stack reacts to malformed or unusual packets, and more.
-3. He compares the responses with a database of known OS fingerprints (for example, Nmap's built-in nmap-os-db).
-4. Because different operating systems implement small details of the TCP/IP stack differently, the responses vary enough to tell OS families and sometimes exact versions apart.
-
-**Command (ADDED CONTEXT, active OS fingerprinting with Nmap):**
-
-```bash
-sudo nmap -O -v 10.10.1.11
-sudo nmap -A 10.10.1.11
-```
-
-- -O: run active OS detection by sending a series of TCP, UDP, and ICMP probes.
-- -A: aggressive mode; runs -O (OS detection), -sV (version detection), -sC (default scripts), and traceroute together.
-
-**Sample output (illustrative):**
-
-```text
-Running: Microsoft Windows 10|11|2016|2019|2022
-OS CPE: cpe:/o:microsoft:windows_10 ...
-OS details: Microsoft Windows 10 1809 - 21H2, ...
-Network Distance: 1 hop
-```
-
-How to read it: "Running" lists the OS family Nmap believes fits best, sometimes with several close versions. "OS details" refines the guess. "Network Distance" is the hop count Nmap measured, useful for sanity-checking a TTL-based guess from 3.8.
-
-**How it works, passive banner grabbing (three techniques from the slide):**
-
-1. **Banner grabbing from error messages.** Error messages provide information such as the type of server, type of OS, and SSL tool used by the target remote system. For example, a misconfigured web server's error page might print "Apache/2.4.41 (Ubuntu)" in the footer, or an SSL error might name the exact TLS library in use.
-2. **Sniffing the network traffic.** Capturing and analyzing packets from the target (as in 3.8) enables an attacker to determine the OS used by the remote system, without sending the target anything extra.
-3. **Banner grabbing from page extensions.** Looking for an extension in the URL may assist in determining the application's version. Example from the slide: .aspx => IIS server and Windows platform. Other common examples (ADDED CONTEXT): .php often implies a Linux or Windows server running PHP (Apache or Nginx common on Linux, IIS possible on Windows); .jsp implies a Java application server such as Tomcat; .cfm implies Adobe ColdFusion.
-
-> **REMEMBER:** The slide notes "We will discuss passive banner grabbing in later modules." Passive banner grabbing from HTTP headers and error pages is covered in more depth when the course reaches web server and web application hacking (Modules 13 and 14).
-
-**ADDED CONTEXT: active banner grabbing with everyday tools.** Netcat and Telnet can manually grab a banner by opening a raw connection to a port and reading what the service says first.
-
-```bash
-nc -nv 10.10.1.11 21
-telnet 10.10.1.11 80
-```
-
-```text
-220 Microsoft FTP Service
-```
-
-A plain connection to port 21 that immediately prints "220 Microsoft FTP Service" is itself a simple form of active banner grabbing, even without a dedicated OS-fingerprinting tool.
-
-**Real-world use:** A tester cannot run -O because a firewall strips the probes Nmap needs for active fingerprinting. He instead grabs the web server's error page, sees "Microsoft-IIS/10.0" in the response headers, and infers a modern Windows Server release without sending a single OS-detection probe.
-
-**Tools and commands used here:** Nmap (-O, -A), Wireshark and tcpdump (passive sniffing), Netcat and Telnet (manual banner reads).
-
-**AI angle (ADDED CONTEXT):** Paste a raw HTTP response header or an FTP banner into an LLM and ask: "What operating system and server software does this banner suggest, and what should I check next?" The model can usually name the product and point toward relevant CVEs, but confirm any CVE number in the NVD before relying on it.
-
-**Countermeasures and defense:** Edit or remove banners and error messages that reveal the product, version, or OS (strip the Server header, use generic error pages, rename default file extensions where practical); disable or filter the probes active fingerprinting tools rely on (where this does not break legitimate diagnostics); keep version information out of publicly visible pages.
-
-**EXAM FOCUS:**
-
-- How it is asked: "An attacker learns the target's OS by reading an IIS error page, without sending any crafted probes. Which technique is this?" -> passive banner grabbing (from error messages).
-- Keywords: "specially crafted packets", "compared with a database" -> active banner grabbing. "Error messages", "sniffing traffic", "page extensions" -> passive banner grabbing.
-- Trap: the .aspx -> IIS/Windows example is a specific, memorized fact the exam likes to test directly. Do not confuse it with .php, .jsp, or .cfm.
-- Look-alike: active banner grabbing (sends crafted packets, like -O) vs the TTL/window-size method in 3.8 (reads values from an ordinary reply, no special crafted probe needed, technically also passive sniffing in nature) vs passive banner grabbing proper (reads error pages, sniffed traffic, or URL extensions).
-
-**Memory trick:** "Active KNOCKS (sends crafted packets); Passive LISTENS (reads errors, sniffs traffic, reads the extension)."
-
-### 3.14 Scanning Beyond IDS and Firewall (Overview)
-
-Note on order: this slide (25) is the menu page that names all ten evasion techniques in the module. In your screenshots it appears on page 7, after several of the individual techniques (packet fragmentation, source port manipulation, IP spoofing, custom packets) had already been shown on pages 4 to 6, and before the rest (source routing, IP decoy, MAC spoofing, randomizing host order, bad checksums) appear on pages 7 to 9. This guide keeps your screenshots' page order, so this overview sits here, but all ten techniques are cross-referenced below regardless of which page introduced them first.
-
-**What it is (simple words):** Though firewalls and IDSs (Intrusion Detection Systems) can prevent malicious traffic (packets) from entering a network, attackers can still manage to send their intended packets to the target by evading the IDS or firewall, through a set of ten techniques.
-
-- **Firewall:** a device or program that filters traffic in or out of a network according to rules.
-- **IDS (Intrusion Detection System):** a device or program that watches traffic and alerts (or, for an IPS, blocks) when it spots a known attack pattern.
-- **Evasion:** making malicious or scanning traffic look harmless enough that a firewall or IDS lets it through or fails to flag it.
-
-**Analogy:** A locked gate with a guard who checks ID cards (firewall and IDS) can still be gotten past by someone who disguises their car, splits their cargo into unmarked boxes, borrows someone else's ID, or sneaks in through a side path the guard never watches. Each evasion technique below is one such disguise.
-
-**The ten techniques (icons on the slide), with where each is covered in this guide:**
-
-| # | Technique | Covered in | One-line idea |
+| No. | Technique | Core idea | Section |
 | --- | --- | --- | --- |
-| 1 | Packet Fragmentation | 3.9 | Split the probe into small IP fragments |
-| 2 | Source Routing | 3.15 (below) | Force a specific, non-firewalled path |
-| 3 | Source Port Manipulation | 3.10 | Fake the sender's port number |
-| 4 | IP Address Decoy | 3.16 | Hide the real scanner among fake IPs |
-| 5 | IP Address Spoofing | 3.11 | Fake the sender's IP address |
-| 6 | MAC Address Spoofing | 3.17 | Fake the sender's hardware address |
-| 7 | Creating Custom Packets | 3.12 | Hand-build packets field by field |
-| 8 | Randomizing Host Order and Sending Bad Checksums | 3.18 | Scan out of order; send broken checksums |
-| 9 | Proxy Servers | below (ADDED CONTEXT) | Relay the scan through a middle server |
-| 10 | Anonymizers | below (ADDED CONTEXT) | Hide the scanner's identity through a web relay |
+| 1 | Packet Fragmentation | Split the probe into tiny pieces | 3.18 |
+| 2 | Source Routing | Choose the packet's path yourself | 3.24 |
+| 3 | Source Port Manipulation | Use a trusted source port | 3.19 |
+| 4 | IP Address Decoy | Hide among fake scanners | 3.25 |
+| 5 | IP Address Spoofing | Use a fake source IP | 3.20 |
+| 6 | MAC Address Spoofing | Use a fake hardware address | 3.26 |
+| 7 | Creating Custom Packets | Build packets the filter does not expect | 3.21 |
+| 8 | Randomizing Host Order and Bad Checksums | Break patterns, test filter checks | 3.27 |
+| 9 | Proxy Servers | Scan through an intermediary | 3.28 |
+| 10 | Anonymizers | Hide the origin of the traffic | 3.28 |
 
-**Proxy servers (ADDED CONTEXT, named as an icon on the slide with no further detail slide in the screenshots).** A proxy server is a middle system that forwards a connection on behalf of a client. When an attacker routes a scan through one or more proxies, the target sees the proxy's IP address as the source, not the attacker's own address. Nmap supports this with --proxies, taking a comma-separated list of HTTP or SOCKS4 proxy URLs; it affects only NSE scripts and version detection, not the ping, port scanning, or OS detection phases of a scan (verify against your Nmap version). Tools such as ProxyChains can force an entire command's traffic through a chain of proxies at the operating-system level.
+**How the techniques map to Nmap (use this as a quick recall):**
 
-```bash
-nmap --proxies http://10.0.0.5:8080 -sV 10.10.1.11
-proxychains nmap -sT 10.10.1.11
+| Technique | Nmap switch or tool |
+| --- | --- |
+| Fragmentation | -f or --mtu |
+| Source routing | --ip-options (L or S) |
+| Source port manipulation | -g or --source-port |
+| Decoy | -D |
+| IP spoofing | Hping3 -a, Nmap -S |
+| MAC spoofing | --spoof-mac |
+| Custom packets | Colasoft Packet Builder, NetScanTools Pro |
+| Random host order | --randomize-hosts |
+| Bad checksums | --badsum |
+| Proxy | --proxies, proxychains |
+
+**Real-world use:** A tester is asked to check whether the client's IDS notices scanning. She runs a plain scan (alerts), then a fragmented scan, then a decoy scan. The IDS misses the fragmented one. The client learns to enable fragment reassembly.
+
+**Countermeasures and defense:** See 3.29 and 3.30. The common idea: use a stateful firewall, reassemble fragments, block source routing, and filter spoofed addresses.
+
+> **EXAM TIP:** If the question lists "Packet fragmentation, source routing, source port manipulation, IP address decoy, IP address spoofing, MAC address spoofing, creating custom packets, randomizing host order, proxy servers, anonymizers", the topic is "scanning beyond IDS and firewall".
+
+**EXAM FOCUS:** Keywords: "evade", "bypass IDS", "intended packets". Trap: Questions often ask "which is NOT an IDS evasion technique". Banner grabbing and ping sweeps are not on this list. Look-alike: evasion (hide the scan) vs anti-forensics (hide traces after access, clearing tracks).
+
+**Memory trick:** "Fred Sells Sixty Decoys, Ian Makes Cheap Rubber Pigs, Always" -> Fragmentation, Source routing, Source port, Decoy, IP spoofing, MAC spoofing, Custom packets, Randomize and bad checksum, Proxies, Anonymizers.
+
+### 3.24 Source Routing
+
+**What it is (simple words):** Normally, each router on the way looks at the destination IP address and chooses the next hop by itself. Source routing lets the sender fix some or all of the route inside the packet. The slide says the attacker makes some or all of these decisions that the routers would normally make. The aim is to send the packet around the firewall or IDS-configured routers to reach the intended destination.
+
+**Analogy:** A taxi driver normally picks the road. In source routing, the passenger hands the driver a written list of streets. The driver must follow it, even if it avoids the checkpoint on the main road.
+
+**The slide figure:** The sender A cannot reach the destination F through the direct path, because a firewall (marked X) blocks it between A and E. So A writes the route A -> B -> C -> D -> E -> F into the packet. The packet goes around the firewall through B, C, and D, and arrives at E and then F.
+
+```text
+   A (sender) ---X---[ FIREWALL ]---> E ---> F (destination)
+   |                                  ^
+   v                                  |
+   B -------------> C -------------> D
+         (route chosen by the sender)
 ```
-
-**Anonymizers (ADDED CONTEXT, same note as proxy servers above).** An anonymizer is a service or tool, often web-based, that strips or hides identifying information (such as the source IP) from a user's traffic, commonly by relaying it through its own servers. Tor (used in Module 02 for dark web footprinting) is the best-known anonymizing network: it routes traffic through several volunteer relays so no single hop knows both who the sender is and what the final destination is. Web-based anonymizer proxies (simple single-hop relay sites) offer a lighter version of the same idea for ordinary browsing.
-
-**How the overview works as a whole (numbered steps):**
-
-1. The attacker profiles the target's defenses (which ports and protocols the firewall allows, whether the IDS signatures match specific scanner tools).
-2. He selects one or more techniques from the ten above that match the gap he has found (for example, a firewall trusting port 80 traffic calls for source port manipulation; a signature-matching IDS calls for packet fragmentation or custom packets).
-3. He runs the scan with the chosen evasion option(s) enabled.
-4. He compares the evasive scan's results with a plain scan's results (where possible) to measure how much the firewall or IDS was actually blocking.
-
-**Real-world use:** A tester finds that a plain Nmap SYN scan against a client segment returns every port filtered, while a ping sweep succeeds. He tries, in order, source port manipulation (-g 80), packet fragmentation (-f), and finally IP decoys (-D), and documents which combination, if any, reaches the hosts, as direct evidence for the client's firewall report.
-
-**Tools and commands used here:** Nmap (most of the ten techniques have a direct Nmap flag), Hping3, Colasoft Packet Builder, NetScanTools Pro, ProxyChains, Tor.
-
-**AI angle (ADDED CONTEXT):** An LLM can act as a menu: given a description of what the firewall seems to be blocking, it can suggest which of the ten techniques to try first and generate the matching command. Always verify the suggested flag against section 5 before running it, since LLMs sometimes invent flag names that look plausible but do not exist in the real tool.
-
-**Countermeasures and defense:** See the Port Scanning Countermeasures (3.19) and IP Spoofing Countermeasures (3.20) lists; in general, use stateful, reassembling, signature- and behavior-aware firewalls and IDS/IPS, patch and update them regularly, and do not trust traffic based on a single easily forged field (port number, IP address, or MAC address).
-
-**EXAM FOCUS:**
-
-- How it is asked: "Which of the following is NOT one of the ten techniques for scanning beyond IDS and firewall listed by EC-Council?" Expect distractors from other modules (such as SQL injection or phishing) mixed with the real ten.
-- Keywords: "evade an IDS or firewall", "send intended packets to the target" -> this group of ten techniques as a whole.
-- Trap: proxy servers and anonymizers sound alike. A proxy server is usually a specific relay a tool is configured to use for one connection or scan (--proxies). An anonymizer (or an anonymizing network like Tor) usually implies a broader service built specifically to hide identity, often with multiple hops.
-- Look-alike: this overview slide groups many distinct techniques; do not answer a specific-technique question with the general label "scanning beyond IDS and firewall" when the question wants the specific one (fragmentation, decoy, and so on).
-
-**Memory trick:** "Please Send Spies Inside, Masking Custom Routes, Reaching Past Agents" -> Packet fragmentation, Source routing, Source port manipulation, IP decoy, MAC spoofing, Custom packets, Randomize and bad checksums, Proxy servers, Anonymizers (10 items, approximate mnemonic order).
-
-### 3.15 Source Routing
-
-**What it is (simple words):** As a packet travels through the nodes (routers) in a network, each router normally examines the destination IP address and chooses the next hop itself to direct the packet toward its destination. Source routing refers to sending a packet to the intended destination with a partially or completely specified route, bypassing firewall- or IDS-configured routers, in order to evade an IDS or firewall. In source routing, the attacker, not the normal routing infrastructure, makes some or all of these forwarding decisions.
-
-- **Next hop:** the next router a packet is sent to on its way to the final destination.
-- **IP option:** an optional field in the IP header that can carry extra instructions, including a source route.
-- **Loose source routing:** the sender lists some routers the packet must pass through, but normal routing fills in the rest of the path.
-- **Strict source routing:** the sender lists every router the packet must pass through, in exact order, with no other hops allowed.
-
-**Analogy:** Normally, a courier company decides which depots your parcel passes through. Source routing is like writing on the parcel itself, "you must go through depot B and depot D, skip every other depot", so the parcel avoids a checkpoint the sender knows about at depot C (where the firewall sits).
 
 **How it works (numbered steps):**
 
-1. The attacker studies the network's layout and finds a firewall- or IDS-protected router on the normal path to the target (shown as the router with the lock icon in the diagram).
-2. He crafts a packet that carries IP options specifying some or all of the route it should take, deliberately routing around the protected router.
-3. Intermediate routers that honor source routing follow the attacker's specified path instead of their own normal routing table.
-4. The packet reaches the destination through a path that never passed through the firewall or IDS that would otherwise have inspected or blocked it.
+1. The attacker adds a source route option to the IP header with a list of router addresses.
+2. Each listed router passes the packet to the next address on the list, not to the one its routing table prefers.
+3. The path avoids the router or firewall that has the blocking rules.
+4. The packet reaches the target. The reply may return by the reverse route.
 
-**Diagram on the slide:**
+**Two kinds (ADDED CONTEXT):**
 
-```text
-             A                     E
-          Sender  ---X--[FIREWALL]-->  --> F Destination
-             |                         ^
-             v                         |
-             B --------> C --------> D
-```
+| Kind | IP option | Rule |
+| --- | --- | --- |
+| Loose Source Routing (LSRR) | Option 131 | Packet must visit listed hops in order, others allowed between |
+| Strict Source Routing (SSRR) | Option 137 | Packet must use exactly the listed hops |
 
-As the figure shows, source routing is where the originator (sender A) dictates the eventual route of the traffic. The direct path from A to E is blocked by a firewall-configured router (marked X). Instead, the attacker's packet carries source-route options that send it A -> B -> C -> D -> E -> F, reaching the destination F by a path that never crosses the blocked, firewalled link.
+The option numbers are ADDED CONTEXT (verify against RFC 791).
 
-**ADDED CONTEXT: Nmap's IP options support.**
+**In Nmap and other tools (ADDED CONTEXT):** Nmap has --ip-options. The letter L followed by addresses requests loose source routing, and S requests strict. Example: nmap --ip-options "L 10.10.1.2 10.10.1.3" TARGET. On Linux, traceroute -g ADDRESS sets a gateway for loose source routing (verify). Many routers now drop source-routed packets by default.
 
-```bash
-sudo nmap --ip-options "L 10.10.1.1 10.10.1.2" 10.10.1.11
-sudo nmap --ip-options "S 10.10.1.1 10.10.1.2" 10.10.1.11
-```
+**Real-world use:** A firewall blocks the attacker's address but sits only on the main route. The attacker lists an intermediate router that connects to the internal network, so the packet never crosses the filtering firewall (only works if routers honor source routing).
 
-- --ip-options: pass IP options directly, including source routing. The letter L requests loose source routing and S requests strict source routing, each followed by a space-separated list of IP addresses that must appear on the path.
-- Nmap can also request record-route or record-timestamp options with the shortcut letters R and T.
-
-**Real-world use:** A penetration tester, with the client's written approval, demonstrates that an edge router still honors source-routed IP options, letting a crafted packet bypass a firewall segment entirely. The finding becomes a priority recommendation, because most production networks should disable source routing at every router they control.
-
-**Tools and commands used here:** Nmap (--ip-options), Hping3 and Scapy (manual IP option crafting, ADDED CONTEXT), Colasoft Packet Builder and NetScanTools Pro (section 3.12).
-
-**AI angle (ADDED CONTEXT):** Ask an LLM: "Explain the difference between loose and strict source routing in the IPv4 header, and why most modern routers disable both by default." A good answer should mention that source routing is rarely seen in practice today precisely because it is a well-known evasion and spoofing-support risk, and that many internet routers block the most dangerous IP options outright.
-
-**Countermeasures and defense:** Disable IP source routing on routers and hosts (most modern operating systems and routers disable it by default, but always verify the configuration); drop packets that carry source-route IP options at the network perimeter; log and alert on any packet that attempts to use these options.
+**Countermeasures and defense:** Turn off IP source routing on all routers and hosts (on Cisco devices the command is no ip source-route). Drop packets with source route options at the edge. Make sure filtering cannot be bypassed with source routing (item 3 on the port scanning countermeasure slide, 3.29).
 
 **EXAM FOCUS:**
 
-- How it is asked: "Which evasion technique lets the sender, rather than the network's own routers, decide the path a packet takes to bypass a firewalled router?" -> source routing.
-- Keywords: "originator dictates the route", "partially or completely specified route", "without firewall-/IDS-configured routers" -> source routing.
-- Trap: source routing changes the path the packet takes through the network. It does not change any field that identifies the sender (that is IP spoofing, 3.11, and MAC spoofing, 3.17) or the apparent sending port (that is source port manipulation, 3.10).
-- Look-alike: source routing (controls the path) vs IP address decoy (3.16, controls which IP looks like it is scanning, not the path) vs proxy servers (3.14, relays through one specific extra hop chosen by the tool, not a full attacker-specified router-by-router path encoded in IP options).
+- How it is asked: "Which technique lets the sender specify the path a packet takes to avoid the firewall?" (source routing).
+- Keywords: "specified route", "originator dictates the route", "next hop", "chooses".
+- Common trap: Source routing is decided by the sender. Normal routing is decided by each router.
+- Look-alike: source routing vs source port manipulation vs source address spoofing. All three start with "source" but differ: route (path), port (number), address (IP).
 
-**Memory trick:** "Source Routing: the Sender draws the map (A to B to C to D to E), skipping the guarded gate."
+**Memory trick:** "Source routing = Sender is the Satnav."
 
-### 3.16 IP Address Decoy
+### 3.25 IP Address Decoy
 
-**What it is (simple words):** The IP address decoy technique refers to generating, or manually specifying, the IP addresses of decoys in order to evade an IDS or firewall. It appears to the target that the decoys, as well as the real host, are all scanning the network at the same time. This makes it difficult for the IDS or firewall to determine which IP address was actually doing the scanning and which addresses were just decoys.
+**What it is (simple words):** The IP address decoy technique generates or manually names the IP addresses of decoys, to evade an IDS or firewall. The slide explains the result. It appears to the target that the decoys, as well as the real host, are scanning the network. This makes it difficult for the IDS or firewall to say which IP address was truly scanning and which were decoys.
 
-- **Decoy:** a fake source IP address added to a scan alongside (or hiding) the attacker's real address, so the target sees many apparent scanners instead of one.
+**Analogy:** A thief walks into a shop together with ten other people who all pick up items and walk about. The guard sees eleven suspicious people and cannot tell who the thief is.
 
-**Analogy:** Instead of one person sneaking up to a door and testing the handle, a crowd of people (some real accomplices, some just mannequins wheeled into place) all approach different doors in the street at once. The homeowner's camera records twenty people; picking out which one actually touched the lock is far harder.
+**Nmap has two ways (slide):**
+
+| Command | Meaning |
+| --- | --- |
+| nmap -D RND:10 TARGET | Generate random decoys (10 of them with RND:10) |
+| nmap -D decoy1,decoy2,decoy3 TARGET | Name the decoy addresses by hand |
+
+The slide says the first form "generates a random number of decoys". Precisely, RND:N makes N random addresses, so RND:10 makes 10 (ADDED CONTEXT, from the Nmap reference guide).
 
 **How it works (numbered steps):**
 
-1. The attacker chooses to run a scan with decoys, either generating them randomly or listing specific addresses.
-2. Nmap sends the same probes from the real scanning host and, in parallel, crafts packets that appear to come from each decoy address.
-3. The target (and any IDS or firewall watching it) sees packets arriving from several different source IPs, all probing the same ports.
-4. Because the real scanner's packets are mixed in with the decoys' packets, picking the real attacker out of the group requires more than just looking at the list of source IPs; the defender needs a method such as checking which IPs are even routable or reachable from the attacker's side.
+1. Nmap builds probes for the target. For each probe it also sends copies with the source address of each decoy.
+2. The probes from the real address are mixed in among the decoy probes.
+3. The target (and its IDS) logs scans from many addresses at once.
+4. Replies to decoy probes go to the decoy hosts. Only replies to the real probes reach the attacker.
+5. The log analyst cannot easily pick out the real scanner.
 
-**Decoy scanning using Nmap, two options from the slide:**
+**Extra decoy tips (ADDED CONTEXT):** You can include ME in the list to choose the position of your real address, for example -D decoy1,decoy2,ME,decoy3. Decoys should be real, running hosts. If decoys are down, the target may be unintentionally SYN-flooded and your real address stands out because it is the only one that answers. Too many decoys slow the scan. Decoys do not work with connect scans (-sT) or version detection.
 
-```bash
-sudo nmap -D RND:10 10.10.1.11
-sudo nmap -D decoy1,decoy2,decoy3,ME,decoy4 10.10.1.11
-```
-
-- nmap -D RND:10 [target]: generates a random number of decoys (here, 10) automatically.
-- nmap -D decoy1,decoy2,decoy3,..etc [target]: manually specifies the exact IP addresses of the decoys to use.
-- Optionally, the keyword ME can be placed in the manual decoy list to control exactly where the real scanning address appears in the sequence (ADDED CONTEXT; if ME is omitted, Nmap places the real address at a random position in the list).
-
-**Sample output (as seen in the module's screenshot, shortened):**
+**Reading the page 8 screenshot (nmap -D RND:10 10.10.1.11):**
 
 ```text
-nmap -D RND:10 10.10.1.11 - Parrot Terminal
-Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-03-08
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-03-08 07:13 EST
 Nmap scan report for 10.10.1.11
 Host is up (0.00067s latency).
 Not shown: 995 filtered tcp ports (no-response)
@@ -1584,69 +1571,59 @@ PORT     STATE SERVICE
 139/tcp  open  netbios-ssn
 445/tcp  open  microsoft-ds
 3389/tcp open  ms-wbt-server
-MAC Address: 00:15:5D:01:00:00 (Microsoft)
+MAC Address: 00:15:5D:01:80:00 (Microsoft)
 Nmap done: 1 IP address (1 host up) scanned in 4.93 seconds
 ```
 
-How to read it: the command (-D RND:10) and the exact timestamp are small in the capture [UNCLEAR on page 8]; the output shown is the best reading. Note that the decoy flag does not change what the scanner itself discovers (five open ports here); it changes how many apparent source IP addresses the target's logs will show for the same set of probes. A defender reviewing logs on 10.10.1.11 would see traffic that looks like it came from 10 (or more, including the real one) different IP addresses, all probing the same ports at nearly the same time.
+How to read it: Five ports are open and 995 are "filtered (no-response)", so 995 + 5 = 1000. Port 21 (FTP), which appeared in other scans of this host, is not listed here, so it is in the filtered group. This often happens when decoy traffic confuses the filter or replies are lost. The scan took 4.93 seconds, slower than the 1.65 seconds of the source-port scan, because decoy packets add traffic and Nmap waits on unanswered probes. [UNCLEAR on page 8]: the latency and port 21 status are small on the screenshot.
 
-> **TRAP:** Decoys must be plausible, reachable hosts, or they stand out as fake. An
-> address that clearly could not route from the attacker's own network position is a
-> giveaway. The decoys' own "replies" are never seen by the attacker; he still learns
-> the result only from his own real packets mixed into the crowd.
+**Real-world use:** A red team member runs nmap -sS -D RND:10 against a client. The client's IDS shows eleven different addresses scanning. The SOC (security operations center) must investigate all of them. The real source is hidden for a while.
 
-**Real-world use:** During an authorized assessment, a tester runs a decoy scan so that the client's own detection logs will show ten apparent source IPs scanning simultaneously. The exercise is used afterward to test whether the client's SOC (Security Operations Center) can correctly flag the real attacker's IP out of the noise, as part of a detection capability test.
+**Tools:** Nmap -D. Hping3 can also send packets with random sources (--rand-source).
 
-**Tools and commands used here:** Nmap (-D RND:N, -D with a manual list, optionally with ME).
+**Countermeasures and defense:** Correlate scans by timing and TTL, since decoys come from different distances. Use router path tracing to find the real source. Egress and ingress filtering stop many spoofed decoy packets from crossing the internet.
 
-**AI angle (ADDED CONTEXT):** Ask an LLM: "Explain how Nmap's decoy scanning option works and why it mainly helps hide the scanner's identity rather than hide that a scan is happening at all." A correct answer notes that decoys add noise around the real scanner's IP, but an alert defender who notices many simultaneous scanners from implausible or unrelated networks may still suspect decoy-based evasion.
-
-**Countermeasures and defense:** Correlate scan alerts with routing plausibility (which source IPs could actually reach you from where they claim to be); use anti-spoofing and anti-scanning firewall rules (see Port Scanning Countermeasure 8 in 3.19); rely on more than source IP alone when attributing a scan, such as timing correlation and traffic volume per source.
+> **EXAM TIP:** Nmap decoy switch is capital -D. Do not confuse it with lowercase -d (debug).
 
 **EXAM FOCUS:**
 
-- How it is asked: "Which Nmap option generates a random number of decoy source addresses for a scan?" -> nmap -D RND:N.
-- Keywords: "appears that decoys as well as the host(s) are scanning", "difficult for the IDS or firewall to determine which IP was actually scanning" -> IP address decoy.
-- Trap: -D RND:10 and -D decoy1,decoy2,... are the two forms shown on the slide; do not confuse -D (decoys) with -g (source port manipulation, 3.10) or -a / --spoof (single spoofed source, 3.11, which replaces the real address rather than hiding it among many).
-- Look-alike: IP address decoy (adds many fake source IPs so the real scanner blends in, used during active scans that still need results) vs IP address spoofing (3.11, replaces the real source IP entirely with one fake address, usually sacrificing the ability to see the reply).
+- How it is asked: "Which Nmap option makes a scan appear to come from several IP addresses?" (-D).
+- Keywords: "decoys as well as the host are scanning", "difficult for the IDS to determine".
+- Common trap: A decoy scan does not hide the real address completely. It hides it among many.
+- Look-alike: decoy (-D, your real IP is among many) vs idle scan (-sI, your real IP never reaches the target) vs IP spoofing (-S, you replace your IP).
 
-**Memory trick:** "Decoy = Disguise by Crowd. One real scanner hides inside a crowd of fake ones."
+**Memory trick:** "D = Decoy = Duck crowd. Hide the real duck among ten fake ducks."
 
-### 3.17 MAC Address Spoofing
+### 3.26 MAC Address Spoofing
 
-Note: the screenshot for this technique shows only the command, its output, and a warning banner; no slide title or bullet text is visible in the capture [UNCLEAR on page 8]. The topic and definition below are reconstructed from the command itself (--spoof-mac) and from the "MAC Address Spoofing" icon already named on the overview slide (3.14, item 6).
+**What it is (simple words):** MAC address spoofing changes the MAC (Media Access Control) address that your packets use. A MAC address is the hardware address of a network card, six bytes written like 00:15:5D:01:80:00. The first three bytes are the vendor code (OUI, Organizationally Unique Identifier). The slide (page 8, title cropped) shows an Nmap scan that uses the --spoof-mac option with the vendor name Dell. [UNCLEAR on page 8]: the title of this slide is cut off in the screenshot. The content clearly shows a MAC spoofing demonstration, which fits slide 25's list.
 
-**What it is (simple words):** MAC address spoofing means changing the hardware (MAC) address that a scanning tool uses for its outgoing frames, so that the frames appear to come from a different network card than the one actually running the scan. This can help an attacker evade access controls or logging that key off a device's MAC address, or impersonate a trusted vendor's hardware on a local network.
+**Analogy:** A building lets in only people who carry a company badge. The attacker prints a copy of someone else's badge and walks in.
 
-- **MAC address:** a 48-bit hardware address burned into (or configurable on) a network interface, usually written as six pairs of hex digits, for example 00:00:97:A2:AE:71.
-- **OUI (Organizationally Unique Identifier):** the first three bytes of a MAC address, assigned to a specific manufacturer; Nmap can look up a vendor name (such as "Dell") and fill in a matching OUI automatically.
-
-**How it works (numbered steps):**
-
-1. The attacker chooses a MAC address, a MAC prefix, or a vendor name to impersonate.
-2. Nmap (or another crafting tool) builds its raw Ethernet frames using that address instead of the real network card's address.
-3. Any local-network device that logs or filters by MAC address (such as a switch with port security, or a network access control system) sees the spoofed vendor's address instead of the real one.
-4. Because using a spoofed MAC requires sending raw Ethernet frames, this only works for scan types that build their own raw packets; it does not work for a plain TCP connect scan, which relies on the operating system's normal networking stack.
-
-**Command from the slide:**
+**The command in the screenshot:**
 
 ```bash
-sudo nmap -sT -Pn --spoof-mac Dell 10.10.1.11
+nmap -sT -Pn --spoof-mac Dell 10.10.1.11
 ```
 
-- -sT: TCP connect (full open) scan.
-- -Pn: skip host discovery, treat the target as up.
-- --spoof-mac Dell: spoof the MAC address using Dell's OUI, with the rest of the address filled in randomly. A value of 0 asks Nmap to pick a completely random MAC; a full or partial hex string can also be given directly.
+**Breakdown:** nmap = program. -sT = TCP connect scan. -Pn = skip host discovery. --spoof-mac Dell = use a MAC address from a Dell vendor prefix. 10.10.1.11 = the target.
 
-**Sample output (as seen on the slide, shortened):**
+**--spoof-mac argument formats (ADDED CONTEXT, from the Nmap reference guide):**
+
+| Argument | Result |
+| --- | --- |
+| 0 | A completely random MAC address |
+| A full MAC such as 01:02:03:04:05:06 | Use exactly that address |
+| A partial hex string (prefix) | Prefix is used and the rest is random |
+| A vendor name such as Dell or Apple | A vendor prefix plus random bytes |
+
+**Reading the screenshot output:**
 
 ```text
-nmap -sT -Pn --spoof-mac Dell 10.10.1.11 - Parrot Terminal
-Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-03-12
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-03-12 04:54 EDT
 Spoofing MAC address 00:00:97:A2:AE:71 (Dell EMC)
-You have specified some options that require raw socket
-access. These options will not be honored for TCP Connect
-scan.
+You have specified some options that require raw socket access.
+These options will not be honored for TCP Connect scan.
 Nmap scan report for 10.10.1.11
 Host is up (0.00030s latency).
 Not shown: 994 closed tcp ports (conn-refused)
@@ -1660,61 +1637,493 @@ PORT     STATE SERVICE
 Nmap done: 1 IP address (1 host up) scanned in 1.74 seconds
 ```
 
-How to read it line by line:
+Line 2 shows Nmap picked a Dell EMC address (the prefix 00:00:97 belongs to Dell EMC). Lines 3 and 4 are the key teaching point. Spoofing a MAC needs raw packets. A TCP connect scan (-sT) uses the OS's normal connect call, so the spoofed MAC is NOT used. Nmap prints the warning to say so. "conn-refused" in the Not shown line is the connect-scan wording for closed ports (a SYN scan says "reset"). To make the spoof work, use a raw scan such as -sS (ADDED CONTEXT). Note also that no MAC Address line appears in the result, because the connect scan does not read it.
 
-- "Spoofing MAC address 00:00:97:A2:AE:71 (Dell EMC)": Nmap confirms the chosen fake MAC address and the vendor name it matched from the OUI database.
-- The warning "these options will not be honored for TCP Connect scan" is the key lesson of this screenshot: because -sT (connect scan) uses the operating system's normal socket interface rather than Nmap's own raw packet engine, Nmap cannot actually apply the spoofed MAC address to this particular scan type. The warning is Nmap telling the user that the --spoof-mac request was effectively ignored here.
-- "Not shown: 994 closed tcp ports (conn-refused)": the "conn-refused" reason, instead of "reset", is typical wording for a connect scan, matching -sT as used here.
-- The result (six open ports) is the same set seen in earlier screenshots of this target, confirming that the scan itself still ran normally, just without the MAC spoofing actually taking effect.
+**Limits (ADDED CONTEXT):** MAC addresses are only used inside one local network (Layer 2). A router replaces them at every hop, so a spoofed MAC is useless across the internet. It matters when the attacker is on the same LAN or Wi-Fi as the target.
 
-> **TRAP:** This screenshot is as much a lesson in a limitation as in a technique: --spoof-mac (like several raw-packet-dependent options) needs a scan type that uses Nmap's own raw socket engine, such as -sS, -sF, -sX, or -sN, not -sT. Pairing --spoof-mac with -sT, as shown here, produces a clear warning and the spoofing silently does not happen.
+**What it helps with (ADDED CONTEXT):**
 
-**Real-world use:** A tester on a local segment wants to see whether a switch's port-security or NAC (Network Access Control) rules trust a specific vendor's devices (for example, approved Dell laptops). He runs a raw-socket scan type (such as -sS) with --spoof-mac Dell, confirms the switch allows the traffic through under the spoofed vendor identity, and reports the gap in the NAC policy.
+- Bypass MAC filtering (Wi-Fi MAC allow lists, switch port security, DHCP reservations).
+- Pretend to be a trusted device (a printer or an IP phone).
+- Hide the real network card vendor.
+- Avoid being tracked by MAC in logs.
 
-**Tools and commands used here:** Nmap (--spoof-mac, requires -sS, -sU, or another raw-packet scan type rather than -sT), macchanger (a dedicated Linux tool for changing a network interface's MAC address at the OS level, ADDED CONTEXT).
+**Real-world use:** A guest network lets in only registered device MACs. The attacker sniffs a registered laptop's MAC and sets his own card to the same address. The network accepts him.
 
-**AI angle (ADDED CONTEXT):** Ask an LLM: "Why does Nmap's --spoof-mac option not work with a TCP connect scan (-sT), and which scan types would let it actually spoof the MAC address?" A good answer should explain the raw-socket requirement and suggest -sS or a similar raw scan type instead.
+**Tools:** Nmap --spoof-mac, macchanger (Linux), Technitium MAC Address Changer and SMAC (Windows) (the last three are ADDED CONTEXT; verify).
 
-**Countermeasures and defense:** Use 802.1X port-based network access control instead of trusting MAC addresses alone (MAC addresses are trivially spoofable); enable switch port security features that limit or alert on unexpected MAC changes; do not rely on MAC address allow-listing as a sole network access control.
+**Countermeasures and defense (ADDED CONTEXT):** Do not rely on MAC filtering as the only control. Use 802.1X (port-based authentication), switch port security with sticky MACs, Dynamic ARP Inspection, DHCP snooping, and alerts when a MAC appears on two ports.
 
 **EXAM FOCUS:**
 
-- How it is asked: "An attacker runs nmap -sT --spoof-mac Dell against a target and sees a warning that the MAC spoofing was not honored. Why?" -> TCP connect scan (-sT) uses the OS's own sockets, not Nmap's raw packet engine, so raw-packet-only options like --spoof-mac have no effect with -sT.
-- Keywords: "--spoof-mac", "OUI", "vendor name" -> MAC address spoofing.
-- Trap: do not assume --spoof-mac always works just because it is specified; the scan type chosen alongside it matters a great deal, as this screenshot demonstrates directly.
-- Look-alike: MAC address spoofing (fakes the hardware address, relevant mainly on the local link / same broadcast domain) vs IP address spoofing (3.11, fakes the network-layer address, relevant across routed networks).
+- How it is asked: "Which Nmap option spoofs the MAC address?" (--spoof-mac). "At which layer does MAC spoofing work?" (Data link, Layer 2).
+- Keywords: "hardware address", "vendor name", "raw socket", "local network".
+- Common trap: MAC spoofing and IP spoofing are different layers. A question about "bypass MAC filtering" is MAC spoofing.
+- Look-alike: --spoof-mac vs -S (spoof source IP) vs -g (source port).
 
-**Memory trick:** "MAC spoofing needs RAW power (-sS, -sU, and friends); -sT (plain Connect) cannot carry it."
+**Memory trick:** "MAC = Machine's Address Card. --spoof-mac Dell = wear a Dell badge."
 
-### 3.18 Randomizing Host Order and Sending Bad Checksums
+### 3.27 Randomizing Host Order and Sending Bad Checksums
 
-**What it is (simple words):** This slide covers two separate evasion tricks side by side.
+#### 3.27.1 Randomizing Host Order (--randomize-hosts)
 
-- **Randomizing host order:** attackers scan the number of hosts in the target network in random order, rather than scanning them sequentially (such as .1, .2, .3, and so on), to scan an intended target that is behind a firewall without producing an obvious sequential pattern.
-- **Sending bad checksums:** attackers send packets with bad, or bogus, TCP/UDP checksums to the intended target, in order to avoid certain firewall rulesets.
+**What it is:** Attackers scan the hosts of a target network in random order, so that a target behind a firewall is not hit in a clear pattern. Nmap switch: nmap --randomize-hosts TARGET. Normally Nmap walks through addresses in order (10.10.1.1, .2, .3, and so on). That orderly pattern is easy for an IDS to spot.
 
-**Analogy:** Randomizing host order is like a thief casing a street by knocking on houses in no particular order (14, then 3, then 29) instead of walking straight down the row from 1 to 30, so a watchful neighbor cannot predict which house comes next. Sending bad checksums is like mailing a parcel with a deliberately smudged, unreadable return-address stamp: a lazy guard who only checks that the stamp "looks present" lets it through, while a careful guard who actually verifies the stamp would reject it as damaged, revealing which guard is paying attention.
+**Analogy:** A burglar who tries door 1, door 2, door 3 in a row is easy to catch on camera. A burglar who tries doors in random order, with pauses, looks like normal visitors.
 
-**How randomizing host order works (numbered steps):**
+**How it works (numbered steps):**
 
-1. The attacker has a range or list of target hosts to scan.
-2. Instead of scanning them in their natural numeric or listed order, the scanner shuffles the order of up to a set group size before scanning.
-3. Monitoring systems that look for a steady, sequential sweep pattern (.1, .2, .3, ...) are less likely to flag the random-order traffic as an obvious scan.
+1. The attacker gives a list or range of targets.
+2. Nmap shuffles the order of the hosts (in groups of up to 16,384 hosts, ADDED CONTEXT).
+3. Probes reach hosts out of order, so there is no clear sequence for the IDS to match.
+4. The attacker also uses slow timing to spread probes in time (ADDED CONTEXT: -T0 paranoid and -T1 sneaky are the slowest).
+
+**The screenshot (page 9):** It runs nmap --randomize-hosts 10.10.1.11. The output is the normal list of 21, 80, 135, 139, 445, and 3389 open, with 994 closed (reset), done in about 1.63 seconds. With a single host, no visible shuffling can happen. The point of the demonstration is the command.
+
+**Countermeasures:** Use IDS rules that count probes from one source over a longer time window, not just in sequence. Correlate logs.
+
+#### 3.27.2 Sending Bad Checksums (--badsum)
+
+**What it is:** A checksum is a small number computed from the packet. The receiver recalculates it to check that the packet is not damaged. Attackers send packets with bad or bogus TCP or UDP checksums to the intended target, to avoid certain firewall rulesets. The slide text says "TCP/UPD", which is a typo for TCP/UDP. Nmap switch: nmap --badsum TARGET.
+
+**Analogy:** You send a parcel with a wrong seal number. A proper recipient throws it away. But a lazy mail sorter who does not check seals may stamp it and reply.
+
+**How it works (numbered steps):**
+
+1. Nmap sends probes with an invalid checksum.
+2. A real host's TCP/IP stack checks the checksum, finds it wrong, and silently drops the packet. No reply.
+3. A firewall or IDS that does not verify checksums may process the packet and reply (or log it) anyway.
+4. So any reply to a bad-checksum probe is likely to have come from a firewall or IDS, not from the real host.
+5. The attacker learns that a filtering device is present and where it is.
+
+**The screenshot (page 9):** It runs nmap --badsum on the target. The output says "All 1000 scanned ports ... are in ignored states" and "Not shown: 1000 filtered tcp ports (no-response)". It took about 23 seconds (slow, because Nmap retried and waited for replies that never came). [UNCLEAR on page 9]: the host address and the exact time are small. Reading it: no port answered. The real host dropped every bad packet, and no firewall answered in its place. That is the expected result when there is no device that fails to verify checksums.
+
+**Real-world use:** A tester runs --badsum and receives RST packets from some ports. Normal hosts would never answer. So a firewall in front is generating those replies. She has found the firewall and can now try to bypass it.
+
+**Tools:** Nmap --badsum. Hping3 can set a bad checksum by hand (verify the option for your version).
+
+**Countermeasures:** Firewalls and IDS should verify checksums and drop bad packets, just as hosts do.
+
+**EXAM FOCUS (both parts):**
+
+- How it is asked: "Which Nmap option sends packets with an invalid checksum?" (--badsum). "Which option shuffles the order of scanned hosts?" (--randomize-hosts).
+- Keywords: "random order", "bogus checksums", "avoid certain firewall rulesets".
+- Common trap: A response to --badsum does NOT come from the target host. It comes from a firewall or IDS.
+- Look-alike: --randomize-hosts (order of hosts) vs -r (do not randomize ports; verify) vs -T (timing).
+
+**Memory trick:** "Random host order = Roulette. Bad sum = Bad homework. The honest host rejects it; a sloppy firewall marks it."
+
+### 3.28 Proxy Servers and Anonymizers
+
+**What it is (simple words):** The overview slide (3.23) names proxy servers and anonymizers as the last two evasion techniques, but the notes have no detail slide for them. The following is ADDED CONTEXT.
+
+- **Proxy server:** a computer that sits between you and the target and sends requests for you. The target sees the proxy's IP address, not yours.
+- **Proxy chaining:** sending traffic through several proxies in a row, so no single proxy knows both the source and the destination.
+- **Anonymizer:** a tool or service that hides your identity and location from the sites you visit. Examples are Tor, VPN services, and web-based anonymizer sites.
+
+**Analogy:** A proxy is a go-between who buys the goods for you, so the shop never sees your face. A chain of proxies is a line of go-betweens. An anonymizer is a mask for your whole identity.
+
+**How it works (numbered steps):**
+
+1. The attacker sets his scanner or browser to use a proxy (or a chain of proxies).
+2. The scanner sends its request to the first proxy.
+3. The proxy forwards it to the next proxy, or to the target.
+4. The target logs the address of the last proxy.
+5. The reply returns along the same path.
+
+**Types and tools (ADDED CONTEXT, verify names before use):**
+
+| Item | What it is | Notes |
+| --- | --- | --- |
+| HTTP proxy | Forwards web requests | Weak anonymity |
+| SOCKS4 and SOCKS5 proxy | Forwards any TCP traffic (SOCKS5 adds UDP) | Used by scanners |
+| ProxyChains | Linux tool that forces a program through proxies | Connect scans only |
+| Proxifier | Windows tool that routes apps through proxies | Commercial |
+| Proxy Switcher | Windows tool to rotate through proxy lists | Older tool |
+| Tor | Onion routing network with three relays | Strong anonymity, slow |
+| Psiphon, VPN services | Tunnel traffic through other servers | Anonymizer type |
+| Tails | Live operating system that sends all traffic through Tor | Leaves no trace on disk |
+
+**Scanning through a proxy (ADDED CONTEXT):**
 
 ```bash
-sudo nmap --randomize-hosts 10.10.1.0/24
+proxychains4 nmap -sT -Pn -n -p 80,443 10.10.1.11
 ```
 
-- --randomize-hosts: tells Nmap to shuffle each group of up to 16,384 hosts before scanning them (ADDED CONTEXT; the exact group size can be changed at compile time, but 16,384 is the documented default, verify for your version).
+Breakdown: proxychains4 starts Nmap inside the proxy chain. -sT is a TCP connect scan (the only type that fits, because proxies pass normal TCP connections, not hand-made raw packets). -Pn skips ping, which does not travel through TCP proxies. -n stops DNS lookups that could leak your real address. The proxies are listed in the ProxyChains config file (for Tor the usual entry is socks5 127.0.0.1 9050, verify the path on your system).
 
-**Sample output (as seen on the slide, shortened, single-host screenshot shown for illustration of the flag; the technique matters most across a range):**
+Nmap also has --proxies (HTTP or SOCKS4 URLs). The Nmap guide warns it only helps NSE scripts and version scans and may disclose your true address in other phases (verify).
+
+**Real-world use:** An attacker scans a target through three proxies in three countries. The target's logs show a foreign address. The investigator must ask each proxy owner for logs, which may take weeks or be impossible.
+
+**Limits:** Proxies add delay. Free proxies may log or tamper with traffic. A raw SYN scan cannot go through a proxy. Many proxies and Tor exit nodes are public lists that defenders block.
+
+**Countermeasures and defense:** Block traffic from known Tor exit nodes and open proxies if the business does not need them. Use threat intelligence feeds of anonymizer IPs. Apply egress filtering so internal users cannot tunnel out. Log and alert on connections to proxy ports (3128, 8080, 1080, verify).
+
+**EXAM FOCUS:**
+
+- How it is asked: "Which technique hides the true source of a scan by using an intermediate server?" (proxy). "Which network routes traffic through multiple relays to hide the origin?" (Tor).
+- Keywords: "intermediary", "proxy chain", "hide identity", "anonymizer".
+- Common trap: A proxy hides the IP address but is not encryption. A VPN or Tor adds encryption between hops.
+- Look-alike: proxy server vs anonymizer vs VPN. A proxy forwards. An anonymizer hides identity. A VPN encrypts the full tunnel.
+
+**Memory trick:** "Proxy = Pass-it-on. Anonymizer = Aliases and masks."
+
+### 3.29 Port Scanning Countermeasures
+
+**What it is (simple words):** The slide lists eight actions that help detect and stop port scanning. Use them as a checklist.
+
+| No. | Countermeasure (from the slide) | Why it works |
+| --- | --- | --- |
+| 1 | Configure firewall and IDS rules to block probes | Stops or alerts on scans |
+| 2 | Scan your own hosts to test firewall detection | Proves detection works |
+| 3 | Block bypass via source port or source routing | Closes the 3.19, 3.24 tricks |
+| 4 | Keep firmware at the latest version | Removes known bugs |
+| 5 | Use a custom rule set, block unwanted ports | Fewer exposed doors |
+| 6 | Filter inbound and outbound ICMP type 3 | Hides hosts, closed UDP ports |
+| 7 | Run TCP, UDP, ICMP scans on your own IP space | Finds your own exposed ports |
+| 8 | Configure anti-scanning and anti-spoofing rules | Blocks scans and fake sources |
+
+**Analogy:** A building owner walks around his own building at night, tries every door, checks that the alarm rings, and replaces broken locks.
+
+**How to apply them (numbered steps):**
+
+1. Decide which ports must be reachable. Block everything else (default deny).
+2. Write firewall and IDS rules for scans (for example many SYNs to many ports from one source).
+3. Test with Nmap from outside and inside. Check that the alerts fire.
+4. Patch and update the firmware.
+5. Filter ICMP carefully and repeat the tests regularly.
+
+**Why filter outbound ICMP type 3 (explained):** ICMP type 3 means "destination unreachable". For UDP, a closed port makes the host send type 3, code 3 (port unreachable). Scanners use that message to tell closed from open. Blocking these messages hides the difference (the scanner sees silence on every port). Inbound ICMP filtering stops echo, timestamp, and address mask pings used in host discovery (3.5.1).
+
+> **ADDED CONTEXT:** Blocking all ICMP can break useful features, such as Path MTU Discovery (type 3, code 4, "fragmentation needed"). Allow what the network needs and filter the rest.
+
+**More defenses (ADDED CONTEXT):** Close and uninstall unused services. Use host-based firewalls. Use rate limiting. Use port knocking (ports open only after a secret knock sequence). Deploy honeypots to catch scanners (Module 12). Use stateful inspection that drops FIN, NULL, and Xmas packets. Segment the network.
+
+**Tools for defenders:** The same scanners (Nmap, Hping3), plus IDS tools such as Snort and Suricata, and firewall logs (ADDED CONTEXT).
+
+**AI angle (ADDED CONTEXT):** Defenders use AI-based detection to spot slow, randomized scans that rules miss. Example prompt for a SOC analyst: "Here are 500 firewall log lines. Find sources that touched more than 20 different ports within 10 minutes and list them." The analyst checks the answer against the raw logs.
+
+> **EXAM TIP:** For any "how can you prevent or detect port scanning" question, look for: firewall, IDS, close unused ports, filter ICMP, update firmware, test yourself.
+
+**EXAM FOCUS:**
+
+- How it is asked: "Which of the following is a port scanning countermeasure?" or "Which ICMP messages should be filtered?" (inbound ICMP types and outbound ICMP type 3).
+- Keywords: "custom rule set", "anti-scanning", "anti-spoofing", "firmware".
+- Common trap: The slide says to scan YOUR OWN network with TCP, UDP, and ICMP probes. This is a defensive step, not an attack.
+- Look-alike: port scanning countermeasures (3.29) vs IP spoofing countermeasures (3.30). Spoofing defenses mention ingress filtering, egress filtering, and random sequence numbers.
+
+**Memory trick:** "Block, Test, Patch, Filter". Block with firewall and IDS rules, a custom rule set, and anti-scanning and anti-spoofing rules (items 1, 5, 8). Test your own network (items 2, 7). Patch firmware (item 4). Filter ICMP (item 6). Item 3 reminds you that source port and source routing must not bypass the filters.
+
+### 3.30 IP Spoofing Countermeasures
+
+**What it is (simple words):** The slide lists six measures against IP spoofing.
+
+| No. | Countermeasure (from the slide) | Plain meaning |
+| --- | --- | --- |
+| 1 | Encrypt all network traffic using IPsec, TLS, SSH, and HTTPS | Fake packets cannot join an encrypted session |
+| 2 | Use multiple firewalls for multi-layered protection | Defense in depth |
+| 3 | Do not rely on IP-based authentication | An IP address is not proof of identity |
+| 4 | Use a random initial sequence number | Attackers cannot guess TCP numbers |
+| 5 | Ingress filtering | Drop incoming packets that claim an internal source IP |
+| 6 | Egress filtering | Drop outgoing packets that carry an invalid local source IP |
+
+**Analogy:** A bank does not accept a phone call just because the caller ID shows the head office. It asks for a code word (encryption and strong authentication). It also checks that no outsider can enter through the staff door (ingress filtering) and that no staff member sends mail with a fake sender (egress filtering).
+
+**Ingress and egress, explained:**
 
 ```text
-nmap --randomize-hosts 10.10.1.11 - Zenmap
-Starting Nmap 7.94 ( https://nmap.org ) at 2024-03-12
+  INTERNET          FIREWALL / ROUTER          INTERNAL LAN
+                                                10.10.1.0/24
+
+  src=10.10.1.5  ---->  DROP (ingress rule: fake internal src)
+
+                 <---- DROP (egress rule: src=8.8.8.8 not mine)
+```
+
+- **Ingress filtering:** applies to traffic coming IN. If a packet arrives from the internet but its source address belongs to your internal range, it is fake. Drop it.
+- **Egress filtering:** applies to traffic going OUT. If a packet leaves your network with a source address that is not in your range, it is spoofed (or an infected machine is sending it). Drop it. This stops your network from being used to attack others.
+
+**How to apply them (numbered steps):**
+
+1. List your internal address ranges and private ranges.
+2. At the perimeter, deny incoming packets whose source is an internal or private range.
+3. At the perimeter, deny outgoing packets whose source is not one of your ranges.
+4. Turn on random initial sequence numbers (modern systems do this by default).
+5. Replace IP-based trust (such as hosts allowed by IP only) with keys, certificates, or tokens.
+6. Encrypt traffic end to end.
+
+**Why a random ISN helps:** The ISN (initial sequence number) is the starting sequence number in a TCP handshake. If it is predictable, an attacker who cannot see the replies can still guess the numbers and inject data into a spoofed session. A random ISN makes guessing hard.
+
+> **ADDED CONTEXT:** The standard best practice for ingress/egress filtering is BCP 38 (RFC 2827). On routers, unicast Reverse Path Forwarding (uRPF) checks that the source address of a packet is reachable through the same interface it arrived on (verify details for your device).
+
+**Real-world use:** An ISP turns on egress filtering. A customer's infected server tries to send packets with random fake sources in a DoS attack. The ISP's router drops them at the edge.
+
+**Tools:** Firewalls, router ACLs (access control lists), uRPF, IDS (ADDED CONTEXT).
+
+**EXAM FOCUS:**
+
+- How it is asked: "Which filtering drops incoming packets that appear to come from an internal address?" (ingress). "Which drops outgoing packets with an invalid source?" (egress). "Why use a random initial sequence number?" (to stop sequence number spoofing).
+- Keywords: "do not rely on IP-based authentication", "IPsec, TLS, SSH, HTTPS", "multi-layered".
+- Common trap: Ingress and egress swap easily. Ingress = in, egress = exit. The direction is relative to your network.
+- Look-alike: encryption protects the content. It does not stop spoofed packets from arriving, but they cannot take part in a protected session.
+
+**Memory trick:** "In = Ingress, Exit = Egress." Six measures: "Every Man Should Randomize Ingress Egress" -> Encrypt, Multiple firewalls, Stop IP-based auth, Random ISN, Ingress, Egress.
+
+## 4. Tool Encyclopedia
+
+Tools marked "(notes)" appear in your screenshots. All others are ADDED CONTEXT: close alternatives the exam often places next to them. Verify versions and options before using any tool.
+
+### 4.1 Scanners and Packet Tools
+
+| Tool | What it does (simple) | Type or platform | Phase used | Exam keyword |
+| --- | --- | --- | --- | --- |
+| Nmap (notes) | Finds hosts, ports, services, OS | CLI, cross-platform | Scanning | "Network Mapper", most used scanner |
+| Zenmap (notes) | Graphical front end for Nmap | GUI, cross-platform | Scanning | Command box, Topology tab |
+| Hping3 (notes) | Sends hand-made TCP, UDP, ICMP packets | CLI, Linux | Scanning | -a spoof, firewall test |
+| Metasploit (notes) | Exploit framework with scanner modules | Framework, CLI | Scan, exploit | auxiliary/scanner |
+| NetScanTools Pro (notes) | Windows toolkit: ping, ports, packets | GUI, Windows | Scanning | Packet crafting, ping sweep |
+| Masscan | Very fast port scanner for huge ranges | CLI | Scanning | Scans internet in minutes |
+| ZMap | Internet-wide single-port scanner | CLI | Scanning | Whole IPv4 space |
+| Unicornscan | Asynchronous scanner with packet control | CLI, Linux | Scanning | Stateless scanning |
+| RustScan | Fast port finder that hands results to Nmap | CLI | Scanning | Fast, then Nmap |
+| Nping | Nmap-suite packet generator | CLI | Scanning | Echo, TCP, UDP, ARP probes |
+| Netcat (nc) | Reads and writes TCP and UDP connections | CLI | Scan, banner | "Swiss army knife" |
+
+Key notes on the tools from your screenshots:
+
+- **Nmap** was written by Gordon Lyon (known as Fyodor). It is free and open source. It has a scripting engine (NSE) for extra checks (ADDED CONTEXT).
+- **Hping3** is best known for crafting packets with chosen flags, spoofing the source (-a), and testing firewall rules. It can also be used for floods, which is a DoS attack (Module 10).
+- **Metasploit** is mostly an exploitation framework (Module 06). It has auxiliary scanner modules and can run Nmap through db_nmap (ADDED CONTEXT).
+- **NetScanTools Pro** is named twice in the notes: once as a scanning tool (3.2) and once as a packet crafting tool (3.21).
+
+### 4.2 Ping Sweep and Host Discovery Tools
+
+| Tool | What it does (simple) | Type or platform | Phase used | Exam keyword |
+| --- | --- | --- | --- | --- |
+| Angry IP Scanner (notes) | Fast IP and port scanner | GUI, cross-platform | Host discovery | "Angry", ping sweep |
+| SolarWinds Engineer's Toolset (notes) | Many network tools including sweep | GUI, Windows | Host discovery | Commercial toolset |
+| NetScanTools Pro (notes) | Ping sweep and more | GUI, Windows | Host discovery | Toolkit |
+| Colasoft Ping Tool (notes) | Pings many hosts at once | GUI, Windows | Host discovery | Multiple ping |
+| Advanced IP Scanner (notes) | LAN scanner, shows shared folders | GUI, Windows | Host discovery | LAN, remote control |
+| OpUtils (notes) | IP and switch port management | GUI, ManageEngine | Host discovery | ManageEngine |
+| fping | Pings many hosts in parallel | CLI | Host discovery | -a, -g sweep |
+| arp-scan | ARP sweep of the local network | CLI, Linux | Host discovery | Layer 2 sweep |
+| Netdiscover | Active and passive ARP discovery | CLI, Linux | Host discovery | ARP recon |
+| MegaPing | Windows scanner and ping suite | GUI, Windows | Host discovery | Multi-tool |
+
+### 4.3 Packet Crafting and Fragmentation Tools
+
+| Tool | What it does (simple) | Type or platform | Phase used | Exam keyword |
+| --- | --- | --- | --- | --- |
+| Colasoft Packet Builder (notes) | Builds and sends custom packets | GUI, Windows | Evasion | Decode editor, hex editor |
+| Scapy | Python library to build and send packets | Python, cross-platform | Scan, evasion | Programmable crafting |
+| Nemesis | Command-line packet injector | CLI, Unix | Evasion | Packet injection |
+| Ostinato | Packet generator with GUI | GUI, cross-platform | Testing | Traffic generator |
+| packETH | Ethernet packet generator | GUI, Linux | Testing | Ethernet frames |
+| fragroute and fragrouter | Split traffic into fragments | CLI, Unix | Evasion | IDS fragmentation test |
+
+### 4.4 Sniffers and OS Fingerprinting Tools
+
+| Tool | What it does (simple) | Type or platform | Phase used | Exam keyword |
+| --- | --- | --- | --- | --- |
+| Wireshark (notes) | Captures and reads packets | GUI, cross-platform | Scan, sniff | TTL and window, OS clue |
+| tcpdump | Command-line packet capture | CLI, Unix | Scan, sniff | Capture to file |
+| p0f | Passive OS fingerprinting | CLI | OS discovery | Passive, no packets sent |
+| Xprobe2 | Active OS fingerprint using ICMP | CLI, Linux | OS discovery | ICMP-based OS guess |
+| Nmap -O | Active OS fingerprint | CLI | OS discovery | Active fingerprint |
+
+### 4.5 Banner Grabbing Tools
+
+| Tool | What it does (simple) | Type or platform | Phase used | Exam keyword |
+| --- | --- | --- | --- | --- |
+| Telnet | Opens a raw connection to a port | CLI | Banner grab | Manual banner |
+| Netcat | Same, with more options | CLI | Banner grab | nc -v host port |
+| curl -I | Fetches only HTTP headers | CLI | Banner grab | Server header |
+| ID Serve | Identifies web server from headers | GUI, Windows | Banner grab | Server ID |
+| Netcraft | Shows web server and OS history | Web service | Recon, banner | Site report |
+
+### 4.6 Spoofing, Proxy, and Anonymizer Tools
+
+| Tool | What it does (simple) | Type or platform | Phase used | Exam keyword |
+| --- | --- | --- | --- | --- |
+| Nmap --spoof-mac | Uses a chosen MAC in raw scans | Nmap option | Evasion | Vendor name, MAC |
+| macchanger | Changes a card's MAC on Linux | CLI, Linux | Evasion | MAC spoof |
+| Technitium MAC Address Changer | Changes MAC on Windows | GUI, Windows | Evasion | MAC spoof |
+| SMAC | Windows MAC spoofer | GUI, Windows | Evasion | MAC spoof |
+| ProxyChains | Forces a program through proxies | CLI, Linux | Evasion | Proxy chaining |
+| Proxifier | Routes apps through proxies | GUI, Windows | Evasion | Proxy client |
+| Proxy Switcher | Rotates proxies from a list | GUI, Windows | Evasion | Proxy list |
+| Tor | Onion routing for anonymity | Network, browser | Evasion | Three relays |
+| Psiphon | Circumvention and anonymizing tool | App | Evasion | Anonymizer |
+| Tails | Live OS that routes all via Tor | Live OS | Evasion | No trace |
+
+### 4.7 Defensive Tools
+
+| Tool | What it does (simple) | Type or platform | Phase used | Exam keyword |
+| --- | --- | --- | --- | --- |
+| Snort | Open-source IDS and IPS | Network IDS | Defense | Rules, scan alerts |
+| Suricata | Open-source IDS, IPS, and monitor | Network IDS | Defense | Multi-thread IDS |
+| Firewall (stateful) | Allows traffic that fits known sessions | Network device | Defense | Drops ACK, FIN, NULL |
+| Honeypot | Fake system that attracts scanners | Decoy system | Defense | Module 12 |
+| Port knocking | Opens a port only after a secret sequence | Technique | Defense | Hidden ports |
+
+> **EXAM TIP:** For tool questions, match the verb. "Create or craft packets" -> Colasoft Packet Builder, Hping3, Scapy. "Sweep a range" -> Angry IP Scanner, Advanced IP Scanner, Nmap -sn. "Capture packets to read TTL" -> Wireshark. "Find open ports on a host" -> Nmap.
+
+## 5. Command Sheet
+
+How to read any command: the first word is the program. Words that start with - or -- are options (flags). A flag may take a value after it. The rest are targets. Many Nmap options need administrator or root rights because they use raw packets. Run them with sudo on Linux. The notes use a target 10.10.1.11 and a lab range 10.10.1.0/24. Flags marked "verify" depend on the tool version.
+
+### 5.1 Anatomy of an Nmap Command
+
+**Purpose:** Understand every part of an Nmap command so you can read any exam command.
+
+**Full syntax:**
+
+```bash
+nmap [SCAN TYPE] [HOST DISCOVERY] [PORTS] [EVASION] [OUTPUT] TARGET
+```
+
+**Breakdown:** SCAN TYPE is the -s option (for example -sS). HOST DISCOVERY is the -P options and -sn. PORTS is -p, -F, or --top-ports. EVASION is -f, -g, -D, and so on. OUTPUT is -oN and similar. TARGET is an address, a name, a range, or a subnet.
+
+**Target formats:**
+
+| Format | Example | Meaning |
+| --- | --- | --- |
+| Single IP | 10.10.1.11 | One host |
+| Host name | www.example.com | Resolved by DNS |
+| Range | 10.10.1.5-23 | Last octet 5 to 23 |
+| CIDR | 10.10.1.0/24 | 256 addresses |
+| List file | -iL targets.txt | Read targets from a file |
+| Exclude | --exclude 10.10.1.1 | Skip an address |
+
+**General flags used across the module:**
+
+| Flag | Meaning | When to use | Example |
+| --- | --- | --- | --- |
+| -v | Verbose output | See progress | nmap -sT -v TARGET |
+| -p | Ports to scan | Choose ports | -p 22,80,443 |
+| -p- | All 65,535 ports | Full scan | nmap -p- TARGET |
+| -F | Fast: top 100 ports | Quick check | nmap -F TARGET |
+| --top-ports N | Scan N most common ports | Shorter scan | --top-ports 20 |
+| -Pn | Skip host discovery | Ping blocked | nmap -Pn TARGET |
+| -n | No DNS lookup | Speed, stealth | nmap -n TARGET |
+| -T0 to -T5 | Timing template | Slow is stealthy | -T1 sneaky, -T4 fast |
+| -oN FILE | Save normal output | Keep results | -oN scan.txt |
+| -oX FILE | Save XML | Tool import | -oX scan.xml |
+| -oG FILE | Save greppable output | Use with grep | -oG scan.gnmap |
+| -oA BASE | Save all three formats | Full record | -oA scan1 |
+
+Timing names (ADDED CONTEXT): -T0 paranoid, -T1 sneaky, -T2 polite, -T3 normal (default), -T4 aggressive, -T5 insane.
+
+**Demo commands:**
+
+```bash
+nmap -sS -p 1-1024 -oN web.txt 10.10.1.11
+nmap -sn 10.10.1.0/24 -oG alive.gnmap
+nmap -Pn -n -F 10.10.1.11
+```
+
+**Common mistakes:** Forgetting sudo for raw scans, which makes Nmap silently fall back to a connect scan or fail. Scanning without permission. Using -p 1-65535 when -p- is shorter. Using -sn and expecting ports.
+
+**What the exam asks:** the meaning of -Pn, -sn, -p-, -F, and -T. Which output flag is for greppable output (-oG).
+
+### 5.2 Host Discovery: nmap -sn with -PE, -PP, -PM, -PR, -PU, -PS, -PA, -PO
+
+**Purpose:** Find which hosts are alive without scanning ports.
+
+**Full syntax:**
+
+```bash
+nmap -sn [-PE | -PP | -PM | -PR | -PU[ports] | -PS[ports] \
+  | -PA[ports] | -PO[protocols]] TARGET
+```
+
+**Breakdown:** nmap = program. -sn = ping scan only (no port scan). One -P option picks the probe type. TARGET is a host, range, or subnet.
+
+| Flag | Meaning | When to use | Example |
+| --- | --- | --- | --- |
+| -sn | Host discovery only, no ports | Build a live-host list | nmap -sn 10.10.1.0/24 |
+| -PE | ICMP echo request (type 8) | Ping is allowed | nmap -sn -PE 10.10.1.5-23 |
+| -PP | ICMP timestamp request (13) | Echo blocked | nmap -sn -PP 10.10.1.11 |
+| -PM | ICMP address mask request (17) | Echo blocked | nmap -sn -PM 10.10.1.11 |
+| -PR | ARP request | Same LAN | nmap -sn -PR 10.10.1.0/24 |
+| -PU | UDP probe (default port 40125) | TCP and ICMP blocked | nmap -sn -PU 10.10.1.11 |
+| -PS | TCP SYN probe (default port 80) | Web ports open | nmap -sn -PS22,80 TARGET |
+| -PA | TCP ACK probe (default port 80) | SYN filtered | nmap -sn -PA80 TARGET |
+| -PO | IP protocol probe (1, 2, 4) | Other probes fail | nmap -sn -PO TARGET |
+| -Pn | Skip discovery, assume up | ICMP blocked everywhere | nmap -Pn TARGET |
+
+Default ports (40125 for UDP, 80 for SYN and ACK) and default protocols (1, 2, 4) are ADDED CONTEXT, verify for your version.
+
+**Demo commands:**
+
+```bash
+nmap -sn -PE 10.10.1.5-23
+nmap -sn -PR -n 10.10.1.0/24
+nmap -sn -PS22,80,443 10.10.1.0/24
+```
+
+Scenario: the first command pings 19 addresses (the ICMP echo ping sweep from the slide). The second finds every host on the local LAN using ARP with no DNS lookups. The third checks three TCP ports on every address, which works when ICMP is blocked.
+
+**Sample output (representative of the ping sweep screenshot on page 2):**
+
+```text
+Starting Nmap 7.94 ( https://nmap.org ) at 2024-03-04 03:50 EST
+Nmap scan report for 10.10.1.5
+Host is up (0.00040s latency).
+MAC Address: 00:15:5D:01:80:05 (Microsoft)
+Nmap scan report for 10.10.1.9
+Host is up (0.00021s latency).
+MAC Address: 00:15:5D:01:80:09 (Microsoft)
 Nmap scan report for 10.10.1.11
-Host is up (0.00061s latency).
-Not shown: 994 closed tcp ports (reset)
+Host is up (0.00063s latency).
+MAC Address: 00:15:5D:01:80:00 (Microsoft)
+Nmap done: 19 IP addresses (3 hosts up) scanned in 1.45 seconds
+```
+
+[UNCLEAR on page 2]: The exact range, the number of live hosts, and the times in the ICMP ping sweep screenshot are small. The slide shows several "Nmap scan report" blocks, each with "Host is up" and a MAC address, and a final summary line. The sample above has the same shape.
+
+How to read it: each "Nmap scan report for" line starts a live host. "Host is up (0.00040s latency)" says it answered and how fast. The MAC line appears only for hosts on the same LAN. The last line is the key: "19 IP addresses (3 hosts up)" means 19 were probed and 3 answered. Addresses that did not answer are not listed.
+
+**Common mistakes:** Expecting open ports from -sn. Forgetting that on a LAN Nmap uses ARP even when you request -PE or -PS (use --send-ip to force IP probes, verify). Using -PU with no ICMP reply allowed. Mixing up -PS (ping) with -sS (scan).
+
+**What the exam asks:** Which -P letter matches which probe. That -sn is a ping scan with no port scan. That -PR is ARP and works only on the local network.
+
+### 5.3 TCP Connect and SYN Scans: -sT and -sS
+
+**Purpose:** Find open TCP ports. -sT completes the handshake. -sS stops after the SYN/ACK.
+
+**Full syntax:**
+
+```bash
+nmap -sT [-v] [-p PORTS] TARGET
+sudo nmap -sS [-v] [-p PORTS] TARGET
+```
+
+**Breakdown:** -sT = connect scan (uses the OS connect call, no root needed). -sS = SYN scan (raw packets, root needed). -v = verbose. -p = ports.
+
+| Flag | Meaning | When to use | Example |
+| --- | --- | --- | --- |
+| -sT | Full TCP connect scan | No root rights | nmap -sT -v TARGET |
+| -sS | Half-open SYN scan | Faster, less logged | sudo nmap -sS -v TARGET |
+| -v | Verbose | Watch open ports appear | -v or -vv |
+| -p- | All ports | Complete check | nmap -sS -p- TARGET |
+
+**Demo commands:**
+
+```bash
+nmap -sT -v 10.10.1.11
+sudo nmap -sS -p 21,80,135,139,445,3389 10.10.1.11
+sudo nmap -sS -p- -T4 10.10.1.11
+```
+
+**Sample output (-sS -p 21,80,135,139,445,3389):**
+
+```text
+Nmap scan report for 10.10.1.11
+Host is up (0.00030s latency).
+
 PORT     STATE SERVICE
 21/tcp   open  ftp
 80/tcp   open  http
@@ -1722,1227 +2131,1205 @@ PORT     STATE SERVICE
 139/tcp  open  netbios-ssn
 445/tcp  open  microsoft-ds
 3389/tcp open  ms-wbt-server
-MAC Address: 00:15:5D:01:00:00 (Microsoft)
-Nmap done: 1 IP address (1 host up) scanned in 1.63 seconds
+MAC Address: 00:15:5D:01:80:00 (Microsoft)
+
+Nmap done: 1 IP address (1 host up) scanned in 0.25 seconds
 ```
 
-How to read it: against a single host the result is identical to a plain scan (six open ports in 1.63 seconds), because there is only one host to "randomize"; the real effect only shows up when scanning a range of many hosts, where the order in which each one is probed becomes unpredictable.
+How to read it: the table has one line per reported port. STATE is open for all six. The SERVICE column is Nmap's name for the standard use of that port number (it is not proof). With a full default scan you would also see "Not shown: 994 closed tcp ports (reset)" above the table. A connect scan says "conn-refused" in that line, a SYN scan says "reset" (see 3.26 and 3.19).
 
-**How sending bad checksums works (numbered steps):**
+**Common mistakes:** Running -sS without root (Nmap falls back to -sT or stops). Believing SYN scans are invisible. Using -p 1-1000 and thinking it covers all ports.
 
-1. The attacker deliberately sets an invalid TCP or UDP checksum on each outgoing packet.
-2. A target's own real TCP/IP stack checks the checksum, finds it wrong, and silently drops the packet, so a genuine host will never actually respond to a bad-checksum probe.
-3. However, some simple firewalls and packet filters only check whether a packet matches a rule (ports, flags, addresses) and do not bother verifying the checksum themselves before passing or logging it.
-4. If any reply does come back after a bad-checksum probe, it is almost certainly from a firewall or an IDS that generated the reply itself, rather than from the real target host, which would have dropped the broken packet. This can reveal the presence and behavior of an in-path security device.
+**What the exam asks:** Which scan completes the handshake (-sT) and which does not (-sS). Which one needs raw sockets (-sS).
+
+### 5.4 Inverse TCP Flag Scans: -sX, -sF, -sN, -sM
+
+**Purpose:** Find open ports by sending odd flag combinations and watching for silence.
+
+**Full syntax:**
 
 ```bash
-sudo nmap --badsum 10.10.1.11
+sudo nmap -sX | -sF | -sN | -sM [-v] [-p PORTS] TARGET
 ```
 
-- --badsum: asks Nmap to use an invalid TCP, UDP, or SCTP checksum for packets sent to the target.
+| Flag | Meaning | When to use | Example |
+| --- | --- | --- | --- |
+| -sX | Xmas: FIN, PSH, URG set | Target is Linux or Unix | sudo nmap -sX -v TARGET |
+| -sF | FIN only | Simple packet filter | sudo nmap -sF -v TARGET |
+| -sN | NULL: no flags | Simple packet filter | sudo nmap -sN -v TARGET |
+| -sM | Maimon: FIN and ACK | BSD-type target | sudo nmap -sM -v TARGET |
 
-**Sample output (as seen on the slide, shortened):**
+**Demo commands:**
+
+```bash
+sudo nmap -sX -v 10.10.1.20
+sudo nmap -sF -p 22,80 10.10.1.20
+sudo nmap -sN -v 10.10.1.20
+```
+
+Scenario: 10.10.1.20 is a Linux web server behind a simple packet filter. The first command sends Xmas probes, the second sends FIN probes to two ports, the third sends NULL probes.
+
+**Sample output (Xmas scan against a Linux host):**
 
 ```text
-nmap --badsum 10.10.1.11 - Zenmap
-Starting Nmap 7.94 ( https://nmap.org ) at 2024-03-12
+Nmap scan report for 10.10.1.20
+Host is up (0.00031s latency).
+Not shown: 998 closed tcp ports (reset)
+PORT   STATE         SERVICE
+22/tcp open|filtered ssh
+80/tcp open|filtered http
+```
+
+How to read it: 998 ports answered RST, so they are closed. Ports 22 and 80 stayed silent, so Nmap cannot tell open from filtered and reports "open|filtered". The tester must confirm with a different scan, such as -sS or -sV.
+
+**Sample output (the same Xmas scan against a Windows host):**
+
+```text
 Nmap scan report for 10.10.1.11
-Host is up (0.0004s latency).
-All 1000 scanned ports on 10.10.1.11 are in ignored states.
-Not shown: 1000 filtered tcp ports (no-response)
-Nmap done: 1 IP address (1 host up) scanned in 23.12 seconds
+Host is up (0.00020s latency).
+Not shown: 1000 closed tcp ports (reset)
 ```
 
-How to read it: every one of the 1000 scanned ports comes back "filtered (no-response)", because the real host's TCP/IP stack correctly drops every packet with an invalid checksum, exactly as RFC-compliant systems should. The scan also takes much longer (23.12 seconds versus 1.63 to 1.65 seconds for earlier scans of the same host), because Nmap must wait out the retransmission timeouts for every port that never answers. If, instead, some ports in a real test did show a reply, that reply is a strong signal that a firewall or IDS is itself answering on the target's behalf without verifying the checksum, which is valuable information about the security device sitting in front of the host.
+How to read it: every port looks closed, even though ports 80 and 3389 are open. Windows sends RST for every unexpected packet, so the scan is useless there. This is the classic exam point.
 
-**Real-world use:** During a firewall assessment, a tester deliberately sends --badsum probes at a server that is known (from earlier scans) to have several open ports. Because every probe now shows "filtered (no-response)" instead of "open", she confirms that the server's own OS correctly validates checksums; she then repeats the same test against the border firewall's management interface and finds that it answers anyway, revealing that the firewall's own stack does not verify checksums before responding, a useful finding for the report.
+**Common mistakes:** Treating "open|filtered" as "open". Using these scans on Windows. Forgetting sudo. Expecting -sM to work on modern systems.
 
-**Tools and commands used here:** Nmap (--randomize-hosts, --badsum).
+**What the exam asks:** Which flags each scan sets. That silence means open or filtered. That they fail against Windows.
 
-**AI angle (ADDED CONTEXT):** Ask an LLM: "Explain what Nmap's --badsum option tests for, and why a reply to a bad-checksum probe is meaningful even though the probe is technically broken." A good answer notes that a correctly implemented TCP/IP stack must drop the packet, so any reply points to a firewall or IDS device that is not checking checksums itself.
+### 5.5 ACK, Window, and TTL-based Scans: -sA and -sW
 
-**Countermeasures and defense:** See Port Scanning Countermeasures (3.19), especially items 1, 2, 3, and 6 to 8, which call for properly configured firewall and IDS rules, routing and filtering that cannot be bypassed, and regular checks of your own address space using the same TCP, UDP, and ICMP probes attackers would use.
+**Purpose:** Map firewall rules. The ACK scan shows which ports are filtered. The window scan tries to also tell open from closed on a few systems.
 
-**EXAM FOCUS:**
+**Full syntax (as shown on the slides):**
 
-- How it is asked: "Which Nmap option sends packets with deliberately invalid TCP or UDP checksums to test firewall rule handling?" -> --badsum. "Which option shuffles the order in which a range of hosts is scanned?" -> --randomize-hosts.
-- Keywords: "bogus checksums", "avoid certain firewall rulesets" -> bad checksums. "Random order", "scan the number of hosts... in random order" -> randomizing host order.
-- Trap: a bad-checksum probe never gets a real reply from the actual target host; any reply indicates an intermediate device (firewall or IDS), not the target itself.
-- Look-alike: sending bad checksums (tests whether a device validates checksums before responding) vs the ACK or window scan (3.6, reads legitimate RST replies to learn about firewall filtering) -- both probe firewall behavior, but bad checksums rely on an invalid packet being mishandled, while ACK/window scans use entirely valid packets.
+```bash
+sudo nmap -sA -v TARGET
+sudo nmap -sA -ttl 100 -v TARGET
+sudo nmap -sA -sW -v TARGET
+```
 
-**Memory trick:** "Randomize the Order so no one sees a straight line; Break the Checksum so only a careless guard answers."
+| Flag | Meaning | When to use | Example |
+| --- | --- | --- | --- |
+| -sA | ACK scan: filtered or unfiltered | Map firewall rules | sudo nmap -sA TARGET |
+| -ttl 100 | Slide wording for TTL-based scan | Exam recall | See note below |
+| --ttl 100 | Real Nmap option: set outgoing TTL | Control hop reach | nmap --ttl 100 TARGET |
+| -sW | Window scan (reads RST window) | Some BSD-type systems | sudo nmap -sW TARGET |
 
-### 3.19 Port Scanning Countermeasures
+[UNCLEAR on page 3]: The slide prints -ttl and puts -sW after -sA. Real Nmap uses --ttl for the time-to-live setting and -sW alone for the window scan. Learn the slide wording for the exam. Use the real options in a real tool (verify).
 
-**What it is:** Eight defensive measures an organization should take against port scanning, listed on the slide.
+**Demo commands:**
 
-1. Configure firewall and IDS rules to detect and block probes.
-2. Run port scanning tools against hosts on the network to determine whether the firewall properly detects port scanning activity.
-3. Ensure that the mechanisms used for routing and filtering at the routers and firewalls, respectively, cannot be bypassed using a particular source port or source routing methods.
-4. Ensure that the router, IDS, and firewall firmware are updated to their latest releases and versions.
-5. Use a custom rule set to lock down the network and block unwanted ports at the firewall.
-6. Filter all ICMP messages (that is, inbound ICMP message types and outbound ICMP type 3 unreachable messages) at the firewalls and routers.
-7. Perform TCP and UDP scanning, along with ICMP probes, against your organization's IP address space to check the network configuration and its available ports.
-8. Ensure that anti-scanning and anti-spoofing rules are properly configured.
+```bash
+sudo nmap -sA -v 10.10.1.11
+sudo nmap -sW -p 22,80 10.10.1.20
+sudo nmap -sA --ttl 100 10.10.1.11
+```
 
-**Key terms:**
-
-- **Rule set:** the ordered list of allow and deny rules a firewall applies to traffic.
-- **ICMP type 3:** "destination unreachable"; code 3 specifically means "port unreachable", which attackers use to learn that a UDP port is closed (section 3.6).
-- **Anti-scanning rule:** a firewall or IDS rule that specifically detects scan-like traffic patterns (many ports touched quickly from one source, unusual flag combinations, and so on) and blocks or alerts on them.
-- **Anti-spoofing rule:** a rule that drops packets whose source address could not plausibly have come from the interface it arrived on (closely related to ingress and egress filtering in 3.20).
-
-**How the countermeasures map to the techniques earlier in this module:**
-
-| Countermeasure | Stops which technique(s) |
-| --- | --- |
-| 1 Firewall/IDS rules to detect and block probes | All scan types (3.6) |
-| 2 Test own network with scanning tools | Confirms that 1 actually works |
-| 3 Routing/filtering not bypassable by source port or route | Source port manip. (3.10), source routing (3.15) |
-| 4 Update router, IDS, firewall firmware | Known evasion bugs in older firmware |
-| 5 Custom rule set, block unwanted ports | Open ports that should not be exposed |
-| 6 Filter ICMP inbound and outbound type 3 | ICMP host discovery (3.5), UDP scan closed-port signal (3.6) |
-| 7 Scan your own IP space with TCP/UDP/ICMP | Confirms the real exposed footprint |
-| 8 Anti-scanning and anti-spoofing rules | Decoys (3.16), spoofing (3.11, 3.17), bad checksums (3.18) |
-
-**Real-world use:** After a penetration test shows that source port manipulation (-g 80) bypassed the client's firewall, the client's network team tightens its rule set so that trust is based on full connection state rather than the source port alone (countermeasure 3), then re-tests with the same technique to confirm the fix (countermeasure 2).
-
-**Tools and commands used here:** The same tools used to attack (Nmap, Hping3) are the right tools to test your own defenses with, under countermeasures 2 and 7.
-
-**AI angle (ADDED CONTEXT):** Ask an LLM to turn this eight-item list into a firewall change-review checklist for a specific vendor's device (for example, a specific firewall platform), including the exact configuration commands. Always test any suggested configuration in a lab before applying it to a production firewall.
-
-**Countermeasures and defense:** This section is itself the countermeasure list for the module's scanning and evasion techniques (3.5 through 3.18).
-
-**EXAM FOCUS:**
-
-- How it is asked: "Which of the following is NOT a recommended port scanning countermeasure?" Expect one plausible-sounding distractor (for example, "disable the firewall during business hours") mixed among the eight real items.
-- Keywords: "filter ICMP type 3", "anti-scanning and anti-spoofing rules", "scan your own IP space" -> this list.
-- Trap: countermeasure 6 specifically calls out ICMP type 3 (destination unreachable), not all ICMP types; do not pick an answer that says "block all ICMP everywhere" as if that were the exact recommendation.
-
-**Memory trick:** "Firewalls Test Routes, Update, Lock, Filter, Probe, and Guard" -> Firewall/IDS rules, Test with scanners, Routing/filtering not bypassable, Update firmware, Lock down with custom rules, Filter ICMP, Probe your own space, Guard with anti-scan/anti-spoof rules.
-
-### 3.20 IP Spoofing Countermeasures
-
-**What it is:** Six defensive measures against IP address spoofing, listed on the slide.
-
-1. Encrypt all the network traffic using cryptographic network protocols such as IPsec, TLS, SSH, and HTTPS.
-2. Use multiple firewalls to provide a multi-layered depth of protection.
-3. Do not rely on IP-based authentication.
-4. Use a random initial sequence number to prevent IP spoofing attacks based on sequence number spoofing.
-5. Ingress filtering: use routers and firewalls at your network perimeter to filter incoming packets that appear to come from an internal IP address.
-6. Egress filtering: filter all outgoing packets with an invalid local IP address as the source address.
-
-**Key terms:**
-
-- **IPsec, TLS, SSH, HTTPS:** cryptographic protocols that authenticate and often encrypt traffic, so even if a packet's source IP is spoofed, the attacker cannot forge the cryptographic proof needed to be accepted as a legitimate party.
-- **IP-based authentication:** trusting a connection simply because it comes from an allowed IP address (for example, an old-style .rhosts or firewall allow-list by source IP), with no password or cryptographic check.
-- **Initial sequence number (ISN):** the starting sequence number a TCP stack picks when opening a new connection. If an attacker can predict a victim's next ISN, he can complete a spoofed TCP handshake blindly, without ever seeing the real replies; a properly randomized ISN defeats this.
-- **Ingress filtering:** checking packets as they enter your network from the outside.
-- **Egress filtering:** checking packets as they leave your network on their way out.
-
-**How it works, ingress and egress filtering together:**
+**Sample output (ACK scan behind a stateful firewall):**
 
 ```text
-          Internet                         Your network
-             |                                  |
-   Incoming: source claims to be                |
-   an internal address? --DROP----------[INGRESS FILTER]
-             |                                  |
-             |                           [EGRESS FILTER]----DROP--
-             |                                  |     Outgoing: source
-             |                                  |     is NOT one of your
-             |                                  |     own internal
-             v                                  v     addresses?
+Not shown: 998 filtered tcp ports (no-response)
+PORT   STATE      SERVICE
+22/tcp unfiltered ssh
+80/tcp unfiltered http
 ```
 
-1. Ingress filtering sits at the point where traffic enters your network from outside. If an incoming packet claims a source address that belongs to your own internal address space, it cannot be genuine (it would mean an outside packet is pretending to be one of your own internal hosts), so it is dropped.
-2. Egress filtering sits at the point where traffic leaves your network. If an outgoing packet's source address is not actually one of your own assigned internal addresses, it cannot be genuine traffic from inside your network, so it is dropped before it ever reaches the internet. This is one of the most effective ways to stop your own network from being used to launch spoofed attacks against someone else.
+How to read it: 998 ports gave no reply, so a firewall blocks them (filtered). Ports 22 and 80 returned RST, so the firewall lets packets reach those ports (unfiltered). The scan does not say whether 22 or 80 are open. A follow-up SYN scan on those two ports would.
 
-**Real-world use:** An ISP implements egress filtering (also known more broadly as BCP 38 / source address validation, ADDED CONTEXT) on its customer-facing links, so that any customer's outgoing packet with a forged source address is dropped at the ISP's own edge, before it can ever reach the wider internet to attack a third party. This single control removes a large share of the internet's capacity for spoofed denial-of-service traffic.
+**Common mistakes:** Reading "unfiltered" as "open". Confusing -sA (scan) with -PA (ping). Using the slide spelling -ttl in a real Nmap run.
 
-**Tools and commands used here:** Router and firewall access-control lists (ACLs) implement ingress and egress filtering; IPsec, TLS/SSL, SSH, and HTTPS implement the encryption and authentication countermeasure.
+**What the exam asks:** That ACK scanning identifies firewall rule sets and stateful behavior. That the TTL-based variant uses the TTL of the RST (under 64 means open in EC-Council's rule) and the window variant uses a non-zero window (verify).
 
-**AI angle (ADDED CONTEXT):** Ask an LLM: "Write an example Cisco IOS access list that implements egress filtering, dropping any outgoing packet whose source address is not within our own 203.0.113.0/24 range." Review and test any generated ACL carefully in a lab before deploying it, since an incorrect filtering rule can take down legitimate traffic.
+### 5.6 Idle (IPID) Scan: -sI
 
-**Countermeasures and defense:** This section is itself the countermeasure list for IP address spoofing (3.11).
+**Purpose:** Scan a target while the target sees only the zombie's address.
 
-**EXAM FOCUS:**
-
-- How it is asked: "Which filtering technique drops outbound packets whose source address does not belong to your own internal address range?" -> egress filtering. "Which filtering technique drops inbound packets that falsely claim to be from an internal address?" -> ingress filtering.
-- Keywords: "random initial sequence number" -> defends against blind spoofing of the TCP handshake. "Do not rely on IP-based authentication" -> removes the whole incentive for an attacker to spoof an address in the first place.
-- Trap: ingress filtering protects your own network from spoofed traffic coming in; egress filtering protects the rest of the internet from spoofed traffic going out of your network. They are often tested as a pair, and it is easy to swap which direction is which.
-- Look-alike: ingress filtering vs egress filtering (direction of travel is the only difference) vs the Port Scanning Countermeasures' anti-spoofing rules (3.19, item 8, a broader, less specific version of the same idea applied to scanning defenses generally).
-
-**Memory trick:** "IN-gress checks what comes IN claiming to be you; E-gress checks what goes Elsewhere claiming to be you (but is not)."
-
-## 4. Tool Encyclopedia
-
-All tools below are used in the scanning phase (phase 2) unless stated otherwise. Tools not named in the screenshots are marked (added).
-
-### 4.1 Core Scanners and Packet Crafters
-
-| Tool | What it does (simple) | Type or platform | Phase used | Exam keyword |
-| --- | --- | --- | --- | --- |
-| Nmap | Host discovery, port/service/OS scanning, scripting | CLI, cross-platform | Scanning | Almost every flag question |
-| Zenmap | Official GUI front end for Nmap | GUI, cross-platform | Scanning | "In Zenmap, -sV detects..." |
-| Hping3 | Crafts and sends custom TCP/UDP/ICMP packets | CLI, Linux | Scanning | IP spoofing, -a, --scan |
-| Metasploit | Exploitation framework with scanner modules | CLI/console, cross-platform | Scanning, exploitation | "auxiliary/scanner" modules |
-| NetScanTools Pro | All-in-one network scanning and crafting suite | Windows GUI | Scanning | "Creating Custom Packets" |
-| Colasoft Packet Builder | Builds and sends custom packets field by field | Windows GUI | Scanning | "packet crafting tool" |
-| Scapy (added) | Python library to craft/send any packet | CLI/library, cross-platform | Scanning | "craft packets in code" |
-| Ostinato (added) | GUI packet crafting and traffic generator | GUI, cross-platform | Scanning | Packet crafting alternative |
-| ProxyChains (added) | Forces a tool's traffic through proxy chains | CLI, Linux | Evasion | "relay through proxies" |
-
-### 4.2 Host and Ping Sweep Tools
-
-| Tool | What it does (simple) | Type or platform | Phase used | Exam keyword |
-| --- | --- | --- | --- | --- |
-| Angry IP Scanner | Fast cross-platform IP and port scanner | GUI, cross-platform | Host discovery | "ping sweep tool" |
-| SolarWinds Engineer's Toolset | Suite including ping sweep and network tools | Windows GUI | Host discovery | "ping sweep tool" |
-| NetScanTools Pro | Also used for ping sweeps and discovery | Windows GUI | Host discovery | "ping sweep tool" |
-| Colasoft Ping Tool | Simple graphical ping sweep tool | Windows GUI | Host discovery | "ping sweep tool" |
-| Advanced IP Scanner | Free LAN scanner, shows live hosts and MACs | Windows GUI | Host discovery | "ping sweep tool" |
-| OpUtils | SolarWinds network monitoring and scanning suite | Web/Windows | Host discovery | "ping sweep tool" |
-
-### 4.3 OS Discovery, Banner Grabbing, and Packet Analysis
-
-| Tool | What it does (simple) | Type or platform | Phase used | Exam keyword |
-| --- | --- | --- | --- | --- |
-| Wireshark | Captures and inspects packets, reads TTL/window | GUI, cross-platform | OS discovery | "sniff/capture the response" |
-| tcpdump (added) | Command-line packet capture | CLI, Linux/Unix | OS discovery | Flag-letter capture output |
-| Nmap -O / -A (added) | Active OS fingerprinting, aggressive scan | CLI | OS discovery | "-O", "-A" |
-| Netcat (added) | Reads raw banners from any TCP/UDP port | CLI, cross-platform | Banner grabbing | "manually grab a banner" |
-| Telnet (added) | Opens a raw connection to read a service banner | CLI, cross-platform | Banner grabbing | "manually grab a banner" |
-
-### 4.4 Evasion and Anonymity Aids
-
-| Tool | What it does (simple) | Type or platform | Phase used | Exam keyword |
-| --- | --- | --- | --- | --- |
-| Tor (added) | Anonymizing network, multi-hop relay | Overlay network | Evasion | "anonymizer", multi-hop |
-| macchanger (added) | Changes a NIC's MAC address at the OS level | CLI, Linux | Evasion | "change MAC address" |
-
-> **EXAM TIP:** When two tools look right, match the exact verb from the question: "craft a custom packet" -> Colasoft Packet Builder or NetScanTools Pro; "ping sweep" -> Angry IP Scanner or the other five named sweep tools; "sniff TTL and window size" -> Wireshark; "spoof a source IP in a one-off packet" -> Hping3; "run every scan type with one flag-based tool" -> Nmap.
-
-## 5. Command Sheet
-
-How to read any command below: the first word is the program; words starting with - or -- are options (flags); a flag may take a value right after it; the rest are targets. Most raw-packet Nmap scans need root or administrator rights (use sudo on Linux). Flags marked "verify" depend on your tool version.
-
-### 5.1 Nmap Host Discovery Flags
-
-**Purpose:** Find which hosts in a range are alive, without necessarily scanning their ports.
+**Full syntax:**
 
 ```bash
-nmap -sn [-PE|-PP|-PM|-PR|-PU|-PS[ports]|-PA[ports]|-PO[protos]] TARGET
+sudo nmap -Pn -p- -sI ZOMBIE[:PROBEPORT] TARGET
 ```
+
+**Breakdown:** -Pn = skip discovery. -p- = all ports. -sI = idle scan using the host ZOMBIE (optionally a port to probe on the zombie). TARGET = the real victim.
 
 | Flag | Meaning | When to use | Example |
 | --- | --- | --- | --- |
-| -sn | Ping scan only, skip port scan | Fast "who is alive" sweep | nmap -sn 10.10.1.0/24 |
-| -PE | ICMP echo ping | Simple internal networks | nmap -sn -PE 10.10.1.1 |
-| -PP | ICMP timestamp ping | Echo is blocked | nmap -sn -PP 10.10.1.1 |
-| -PM | ICMP address mask ping | Echo is blocked | nmap -sn -PM 10.10.1.1 |
-| -PR | ARP ping | Local LAN, most reliable | nmap -sn -PR 10.10.1.0/24 |
-| -PU[ports] | UDP ping | TCP/ICMP both blocked | nmap -sn -PU53 10.10.1.1 |
-| -PS[ports] | TCP SYN ping | ICMP blocked by firewall | nmap -sn -PS80,443 10.10.1.1 |
-| -PA[ports] | TCP ACK ping | SYN blocked, ACK allowed | nmap -sn -PA80 10.10.1.1 |
-| -PO[protos] | IP protocol ping | Unusual filter rules | nmap -sn -PO1,2,4 10.10.1.1 |
-| -Pn | Skip discovery, assume host is up | Discovery itself is blocked | nmap -Pn -sS 10.10.1.1 |
-| --disable-arp-ping | Stop automatic ARP on local nets | Force a chosen ping type | --disable-arp-ping |
+| -sI | Idle scan via zombie | Hide the attacker's IP | -sI 10.10.1.50 |
+| -Pn | No ping | Zombie scans need it | -Pn |
+| -p | Ports to test | Limit time | -p 80,443 |
+| -p- | All 65,535 ports | Full coverage | -p- |
 
 **Demo commands:**
 
 ```bash
-sudo nmap -sn -PE 10.10.1.0/24
-sudo nmap -sn -PS80,443 -PA80 10.10.1.11
+sudo nmap -Pn -p- -sI 10.10.1.50 10.10.1.11
+sudo nmap -Pn -p 80,443 -sI 10.10.1.50:445 10.10.1.11
 ```
 
-**Sample output:** see section 3.5 for a full line-by-line reading of both a single-host and a ping-sweep result.
+Scenario: 10.10.1.50 is an idle network printer with an incrementing IPID. The first command scans every port of 10.10.1.11 through the printer. The second scans two ports and uses port 445 on the zombie for its probes.
 
-**Common mistakes:** forgetting -sn and letting a "discovery only" scan also run a full port scan; assuming -Pn and -sn do opposite things when they are actually unrelated (-Pn skips discovery and scans anyway, -sn does discovery only and never scans ports).
+**Sample output:**
 
-**What the exam asks:** matching each -P letter to its probe type (see the memory trick in 3.5); recognizing that -sn means "no port scan", not "SYN".
+```text
+Idle scan using zombie 10.10.1.50 (10.10.1.50:80); Class: Incremental
+Nmap scan report for 10.10.1.11
+Not shown: 65529 closed|filtered tcp ports (no-response)
+PORT     STATE SERVICE
+80/tcp   open  http
+445/tcp  open  microsoft-ds
+3389/tcp open  ms-wbt-server
+```
 
-### 5.2 Nmap Port Scanning Flags
+How to read it: line 1 confirms the zombie and its IPID class. "Incremental" is good: the IPID rises by one per packet, so the method works. If the class is "Random" or "All zeros", pick another zombie. The state "closed|filtered" appears because the idle scan cannot tell closed from filtered. Only open ports are listed by name.
 
-**Purpose:** Determine which ports on a live host are open, closed, or filtered, using a chosen probe type.
+**Common mistakes:** Choosing a busy host as zombie (its own traffic raises the IPID and gives wrong results). Forgetting -Pn. Expecting results if the zombie sits behind an ingress filter.
+
+**What the exam asks:** That -sI is the idle scan. That the scan uses IPID changes (+2 open, +1 closed). That the attacker's IP is not seen by the target.
+
+### 5.7 UDP, SCTP, and IPv6 Scans: -sU, -sY, -sZ, -6
+
+**Purpose:** Scan protocols other than TCP, and scan IPv6 targets.
+
+**Full syntax:**
 
 ```bash
-nmap -sT|-sS|-sX|-sF|-sN|-sM|-sA|-sW|-sU|-sY|-sZ [-p PORTS] \
-  [-6] TARGET
-nmap -Pn -p- -sI ZOMBIE TARGET
+sudo nmap -sU [-v] [-p PORTS] TARGET
+sudo nmap -sY [-v] TARGET
+sudo nmap -sZ [-v] TARGET
+nmap -6 [SCAN OPTIONS] TARGET
 ```
 
 | Flag | Meaning | When to use | Example |
 | --- | --- | --- | --- |
-| -sT | TCP connect (full open) scan | No root, or want full logging | nmap -sT 10.10.1.11 |
-| -sS | TCP SYN (half-open) scan | Default root scan, quieter | sudo nmap -sS 10.10.1.11 |
-| -sX | Xmas scan (FIN+PSH+URG) | Test simple non-stateful filters | sudo nmap -sX 10.10.1.11 |
-| -sF | FIN scan | Same idea as Xmas, one flag | sudo nmap -sF 10.10.1.11 |
-| -sN | NULL scan | Same idea, no flags at all | sudo nmap -sN 10.10.1.11 |
-| -sM | Maimon scan (FIN+ACK) | BSD-derived targets | sudo nmap -sM 10.10.1.11 |
-| -sA | ACK scan | Map firewall rule behavior | sudo nmap -sA 10.10.1.11 |
-| -sW | Window scan | Refine ACK scan on some OSes | sudo nmap -sW 10.10.1.11 |
-| -sU | UDP scan | DNS, SNMP, TFTP and other UDP | sudo nmap -sU 10.10.1.11 |
-| -sY | SCTP INIT scan | SCTP services (telephony) | sudo nmap -sY 10.10.1.11 |
-| -sZ | SCTP COOKIE ECHO scan | Bypass simple INIT-only filters | sudo nmap -sZ 10.10.1.11 |
-| -sI ZOMBIE | Idle scan through a zombie host | Hide the real scanner's IP | sudo nmap -sI 10.10.1.5 TGT |
-| -6 | Scan an IPv6 target | Target has an IPv6 address | nmap -6 2001:db8::10 |
-| -p PORTS | Choose which ports to scan | Narrow or widen the scan | -p 1-1000 or -p 80,443 |
-| -p- | Scan all 65535 ports | Full sweep | nmap -p- 10.10.1.11 |
-| --top-ports N | Scan the N most common ports | Faster broad coverage | --top-ports 100 |
+| -sU | UDP scan | DNS, SNMP, NTP, TFTP | sudo nmap -sU -v TARGET |
+| -sY | SCTP INIT scan | Telecom services | sudo nmap -sY TARGET |
+| -sZ | SCTP COOKIE ECHO scan | Quieter SCTP probe | sudo nmap -sZ TARGET |
+| -6 | Use IPv6 | IPv6 address or AAAA name | nmap -6 TARGET |
+| --top-ports N | Limit to common ports | UDP is slow | --top-ports 50 |
 
 **Demo commands:**
 
 ```bash
-sudo nmap -sS -p 1-1000 10.10.1.11
-sudo nmap -sU --top-ports 20 10.10.1.11
-sudo nmap -Pn -p- -sI 10.10.1.5 10.10.1.11
+sudo nmap -sU -p 53,69,123,161 10.10.1.30
+sudo nmap -sU -sV --top-ports 20 10.10.1.30
+nmap -6 -sS fe80::215:5dff:fe01:8000%eth0
 ```
 
-**Sample output:** see section 3.6 for full line-by-line readings of SYN, Xmas/FIN/NULL (Linux and Windows targets), ACK, window, UDP, and idle scan results.
+Scenario: the first command checks four well-known UDP ports. The second scans the 20 most common UDP ports and asks for service versions. The third scans an IPv6 link-local address through the interface eth0 (%eth0 names the interface, ADDED CONTEXT).
 
-**Common mistakes:** running -sX, -sF, -sN, or -sM against a Windows target and expecting useful results (Windows answers RST to everything, so all ports show closed); forgetting that UDP scanning is slow and should usually be limited with -p or --top-ports; mixing up -sA (never shows "open") with -sS (shows "open" directly).
+**Sample output (-sU):**
 
-**What the exam asks:** the exact flags set by each scan (Xmas = FIN+PSH+URG, Maimon = FIN+ACK); which scan type a given description matches; why FIN/NULL/Xmas scans fail against Windows.
+```text
+Not shown: 996 closed udp ports (port-unreach)
+PORT    STATE         SERVICE
+53/udp  open          domain
+123/udp open|filtered ntp
+161/udp open          snmp
+```
 
-### 5.3 Nmap Service and OS Detection
+How to read it: "port-unreach" means closed ports sent back ICMP port unreachable. Port 53 and 161 answered with real UDP replies (open). Port 123 stayed silent (open|filtered).
 
-**Purpose:** Identify the exact software version behind each open port, and guess the target's operating system.
+**Common mistakes:** Running -sU on all 65,535 ports without a time plan. Treating silence as closed. Using -sY or -sZ against hosts that do not run SCTP and expecting a result.
+
+**What the exam asks:** The letter for each protocol (U = UDP, Y = SCTP INIT, Z = SCTP COOKIE ECHO). That -6 enables IPv6.
+
+### 5.8 Service Version and OS Detection: -sV, -O, -A
+
+**Purpose:** Name the software and version behind open ports (-sV) and guess the operating system (-O). -A runs both plus scripts and traceroute.
+
+**Full syntax:**
 
 ```bash
 nmap -sV [--version-intensity 0-9] TARGET
-nmap -O TARGET
-nmap -A TARGET
+sudo nmap -O [--osscan-guess] TARGET
+sudo nmap -A TARGET
 ```
 
 | Flag | Meaning | When to use | Example |
 | --- | --- | --- | --- |
-| -sV | Detect service name and version | After finding open ports | nmap -sV 10.10.1.11 |
-| --version-intensity N | How hard to probe (0 light, 9 max) | Balance speed vs accuracy | --version-intensity 9 |
-| --version-light | Shortcut for intensity 2 | Fast, less accurate | --version-light |
-| --version-all | Shortcut for intensity 9 | Slow, most accurate | --version-all |
-| -O | Active OS fingerprinting | Guess the target's OS | sudo nmap -O 10.10.1.11 |
-| -A | -sV + -O + default scripts + traceroute | One command, full picture | sudo nmap -A 10.10.1.11 |
+| -sV | Detect service versions | Match exploits | nmap -sV 10.10.1.11 |
+| --version-intensity N | How hard to probe (0 to 9) | Faster or deeper | --version-intensity 5 |
+| --version-light | Intensity 2 | Quick check | --version-light |
+| --version-all | Intensity 9 | Hard-to-name service | --version-all |
+| -O | Detect operating system | OS discovery | sudo nmap -O TARGET |
+| --osscan-guess | Guess when no exact match | Uncertain result | --osscan-guess |
+| -A | Version, OS, scripts, traceroute | Full picture, noisy | sudo nmap -A TARGET |
+
+Intensity values and -A parts are ADDED CONTEXT, verify for your version.
 
 **Demo commands:**
 
 ```bash
 nmap -sV 10.10.1.11
-sudo nmap -A 10.10.1.11
+sudo nmap -O -sV 10.10.1.11
+sudo nmap -A -p 80,443 10.10.1.11
 ```
 
-**Sample output:** see section 3.7 for the full VERSION-column reading, and section 3.13 for the -O/-A "Running" and "OS details" reading.
+**Sample output of -O (representative):**
 
-**Common mistakes:** running -sV or -O together with fragmentation (-f) or other raw-packet-distorting options, which Nmap itself warns breaks these features; expecting -O to give a certain answer rather than a best guess with a confidence percentage.
+```text
+Device type: general purpose
+Running: Microsoft Windows 10|11
+OS CPE: cpe:/o:microsoft:windows_10 cpe:/o:microsoft:windows_11
+OS details: Microsoft Windows 10 1709 - 21H2
+Network Distance: 1 hop
+```
 
-**What the exam asks:** -sV finds software versions (to match exploits); -O guesses the OS; -A bundles both plus scripts and traceroute into one aggressive scan.
+How to read it: "Device type" is the class. "Running" is the OS family with a version range. "OS CPE" is the standard machine-readable name. "OS details" lists the closest fingerprint matches. "Network Distance: 1 hop" means the target is on the same LAN. For the -sV output, see the screenshot reading in 3.16.
 
-### 5.4 Nmap Evasion Flags
+**Common mistakes:** Believing -O is always right. It guesses from patterns. Forgetting that -O needs at least one open and one closed port to be accurate. Using -A on a production system without warning the owner (it is loud).
 
-**Purpose:** Change how a scan's packets look, to get past a firewall or IDS, or to hide the scanner's identity.
+**What the exam asks:** -sV = versions, -O = OS, -A = aggressive (everything). The slide uses -sV in Zenmap to detect service versions.
+
+### 5.9 Evasion Switches: -f, -g, -D, -S, --spoof-mac, --badsum
+
+**Purpose:** Change how the scan looks to a firewall or IDS.
+
+**Full syntax:**
 
 ```bash
-nmap -f | --mtu N TARGET
-nmap -g PORT | --source-port PORT TARGET
-nmap -D RND:N | decoy1,decoy2,...[,ME] TARGET
-nmap --spoof-mac MAC|PREFIX|VENDOR TARGET
-nmap --randomize-hosts TARGET_RANGE
-nmap --badsum TARGET
-nmap --ip-options "R|T|L addr...|S addr..." TARGET
-nmap --proxies URL[,URL...] TARGET
+sudo nmap -sS -f TARGET
+sudo nmap -sS --mtu 16 TARGET
+sudo nmap -sS -g 80 TARGET
+sudo nmap -sS -D RND:10 TARGET
+sudo nmap -sS -D decoy1,decoy2,ME TARGET
+sudo nmap -sS --spoof-mac Dell TARGET
+nmap --randomize-hosts TARGET-RANGE
+sudo nmap --badsum TARGET
 ```
 
 | Flag | Meaning | When to use | Example |
 | --- | --- | --- | --- |
-| -f | Fragment packets (8 bytes/fragment) | Simple filter inspects whole packets only | sudo nmap -f -sS 10.10.1.11 |
-| --mtu N | Custom fragment size (multiple of 8) | Finer control than -f | --mtu 24 |
-| -g PORT | Force a specific source port | Firewall trusts that port | sudo nmap -g 80 10.10.1.11 |
-| --source-port PORT | Same as -g, long form | Same as -g | --source-port 53 |
-| -D RND:N | N random decoy source IPs | Hide scanner among random noise | sudo nmap -D RND:10 10.10.1.11 |
-| -D list[,ME] | Manually chosen decoy IPs | Control exactly which decoys | -D 10.1.1.5,10.1.1.9,ME |
-| --spoof-mac VALUE | Fake source MAC (needs raw scan) | Test MAC-based trust (local LAN) | --spoof-mac Dell |
-| --randomize-hosts | Shuffle scan order across a range | Avoid an obvious sequential sweep | --randomize-hosts |
-| --badsum | Send invalid TCP/UDP/SCTP checksums | Test if a device answers anyway | --badsum |
-| --ip-options "..." | Set IP header options, incl. source routing | Route around a firewalled router | --ip-options "L 10.1.1.1" |
-| --proxies URL,... | Relay NSE/version traffic via proxies | Hide true source for those features | --proxies http://10.1.1.5:8080 |
+| -f | Fragment packets (8 bytes) | Stateless packet filter | sudo nmap -f TARGET |
+| --mtu N | Custom fragment size (multiple of 8) | Tune fragmentation | --mtu 16 |
+| -g PORT | Set source port | Firewall trusts a port | nmap -g 80 TARGET |
+| --source-port PORT | Same as -g | Same | --source-port 53 |
+| -D RND:N | N random decoys | Hide in a crowd | -D RND:10 |
+| -D a,b,c | Named decoys | Use live hosts | -D 10.10.1.3,ME |
+| -S IP | Spoof source address | Needs -e and -Pn | -S 10.10.1.99 -e eth0 -Pn |
+| --spoof-mac X | Fake MAC (vendor, prefix, 0) | LAN filtering | --spoof-mac Dell |
+| --randomize-hosts | Shuffle target order | Break patterns | --randomize-hosts |
+| --badsum | Send bad TCP or UDP checksum | Detect firewall or IDS | --badsum |
+| --data-length N | Add N random bytes to packets | Look less like Nmap | --data-length 25 |
+| --ip-options | Set IP options such as source route | Route around a filter | --ip-options "L IP1 IP2" |
+| -T0 / -T1 | Very slow timing | Avoid rate-based IDS | -T1 |
+
+The last three rows (--data-length, --ip-options, -T0 and -T1) are ADDED CONTEXT from the Nmap reference guide.
 
 **Demo commands:**
 
 ```bash
-sudo nmap -f -sS 10.10.1.11
-sudo nmap -g 80 -sS 10.10.1.11
-sudo nmap -D RND:10 10.10.1.11
-sudo nmap -sT -Pn --spoof-mac Dell 10.10.1.11
-sudo nmap --randomize-hosts 10.10.1.0/24
-sudo nmap --badsum 10.10.1.11
+sudo nmap -sS -f -Pn 10.10.1.11
+nmap -g 80 10.10.1.11
+nmap -D RND:10 10.10.1.11
+nmap -sT -Pn --spoof-mac Dell 10.10.1.11
+nmap --randomize-hosts 10.10.1.11
+nmap --badsum 10.10.1.11
 ```
 
-**Sample output:** see sections 3.9 through 3.18 for full, line-by-line readings of each of these flags in action.
+The last five are the exact commands on your screenshots (pages 5, 8, and 9). Scenario for the first: a stateless packet filter hides the host, so the tester scans with tiny fragments.
 
-**Common mistakes:** pairing --spoof-mac with -sT, which Nmap will not honor (needs a raw-packet scan type such as -sS); expecting --badsum to ever show "open" from the real target (a correctly built stack always drops a bad-checksum packet); using decoys that could not plausibly be on the attacker's network path.
+**Sample outputs:** The decoy scan, the MAC spoof scan, and the source-port scan outputs are shown line by line in 3.25, 3.26, and 3.19. The bad checksum output looks like this:
 
-**What the exam asks:** matching each evasion flag to its one-line description (fragment, source port, decoy, MAC spoof, randomize order, bad checksum, source route, proxy); recognizing the specific limitation shown in the --spoof-mac plus -sT screenshot.
+```text
+Nmap scan report for 10.10.1.11
+Host is up (0.0010s latency).
+All 1000 scanned ports on 10.10.1.11 are in ignored states.
+Not shown: 1000 filtered tcp ports (no-response)
+Nmap done: 1 IP address (1 host up) scanned in 23.12 seconds
+```
 
-### 5.5 Hping3
+How to read it: every probe had a bad checksum and the host dropped all of them. Silence on every port means nothing replied in place of the host, so no device in front of it answered bad packets. A reply on some ports would point to a firewall or IDS.
 
-**Purpose:** Craft and send custom TCP, UDP, ICMP, or raw IP packets, including spoofed-source packets, for scanning, testing firewall rules, or simple denial-of-service testing in a lab.
+**Common mistakes:** Using -f with -sT or -sV (fragmentation needs raw packets). Using --spoof-mac with -sT (not honored, see 3.26). Using decoys that are switched off. Writing -d (debug) instead of -D (decoy). Putting a value after -f (it takes none; use --mtu for a size).
+
+**What the exam asks:** Which switch does which evasion. For example "-g or --source-port" for source port manipulation, "-D" for decoys, "--spoof-mac" for MAC spoofing, "--randomize-hosts" for random order, "--badsum" for bad checksums, "-f" for fragmentation.
+
+### 5.10 Hping3 and IP Spoofing: hping3 TARGET -a SPOOFED-IP
+
+**Purpose:** Send hand-made TCP, UDP, or ICMP packets. In the notes (page 5) it spoofs the source IP address.
+
+**Full syntax:**
 
 ```bash
-hping3 [-c count] [-S|-A|-F|-R|-P|-U] [-p port] \
-  [-a spoofed_ip] [-t ttl] [--scan ports] TARGET
+sudo hping3 [MODE] [FLAGS] [-p PORT] [-a SPOOFED-IP] [-c COUNT] TARGET
 ```
+
+The slide shows the command as: Hping3 www.certifiedhacker.com -a 7.7.7.7. On Linux the program name is lowercase hping3, and it needs root.
+
+**Breakdown of the slide command:** hping3 = program. www.certifiedhacker.com = target host (resolved to an IP). -a 7.7.7.7 = use 7.7.7.7 as the source address. No mode flag means the default TCP mode, sending a packet with no flags to port 0 (ADDED CONTEXT from the man page).
 
 | Flag | Meaning | When to use | Example |
 | --- | --- | --- | --- |
-| -c, --count N | Number of packets to send | Limit how many probes go out | -c 5 |
-| -S | Set the SYN flag | Simple SYN-style probe | hping3 -S -p 80 TARGET |
-| -A | Set the ACK flag | ACK-style probe | hping3 -A -p 80 TARGET |
-| -F | Set the FIN flag | FIN-style probe | hping3 -F -p 80 TARGET |
-| -1, --icmp | ICMP mode (echo request by default) | Ping-like test, custom ICMP | hping3 -1 TARGET |
-| -2, --udp | UDP mode | UDP-based probing | hping3 -2 -p 53 TARGET |
-| -p, --baseport/-p | Destination port for the probe | Choose the target port | -p 80 |
-| -a, --spoof HOST | Spoof the source IP address | Hide the real sender (3.11) | hping3 TARGET -a 7.7.7.7 |
-| -t, --ttl N | Set the outgoing TTL | Combine with --traceroute | -t 1 --traceroute |
-| --traceroute | Run in traceroute mode | Map the path to a target | hping3 --traceroute -1 TARGET |
-| -8, --scan ports | Scan mode across a list of ports | Act like a simple port scanner | --scan 1-1000,8888 -S TARGET |
-| -V, --verbose | Show detailed reply info (TTL, win, id) | Read extra diagnostic detail | -V |
+| -a IP (--spoof) | Fake source address | IP spoofing test | -a 7.7.7.7 |
+| --rand-source | Random source for every packet | Hide, flood tests | --rand-source |
+| -1 | ICMP mode (echo request) | Ping a host | hping3 -1 TARGET |
+| -2 | UDP mode | UDP test | hping3 -2 -p 161 TARGET |
+| -8 (--scan) | Scan mode with a port list | Port scan | -8 1-100 |
+| -S | Set SYN flag | SYN probe | -S -p 80 |
+| -A | Set ACK flag | ACK probe, map firewall | -A -p 80 |
+| -F | Set FIN flag | FIN probe | -F -p 80 |
+| -P | Set PUSH flag | Part of Xmas-like set | -F -P -U |
+| -U | Set URG flag | Part of Xmas-like set | -F -P -U |
+| -R | Set RST flag | RST probe | -R -p 80 |
+| -p PORT | Destination port | Choose the target port | -p 80 |
+| -s PORT | Source (base) port | Source port tests | -s 53 |
+| -c N | Stop after N packets | Limit the test | -c 3 |
+| -V | Verbose | See more fields | -V |
+| -T | Traceroute mode | Map the path | hping3 -T -S TARGET |
+
+The flag list is ADDED CONTEXT from the hping3 man page except -a, which is on your slide. Verify options for your version. Do not use -X: in hping3 it sets an unused flag bit (0x40) and is not the Xmas scan. Build an Xmas-like packet with -F -P -U.
 
 **Demo commands:**
 
 ```bash
-hping3 www.certifiedhacker.com -a 7.7.7.7
-sudo hping3 -c 5 -S -p 80 -a 7.7.7.7 www.certifiedhacker.com
-sudo hping3 --scan 1-1000,8888 -S 10.10.1.11
+sudo hping3 www.certifiedhacker.com -a 7.7.7.7 -c 5
+sudo hping3 -S 10.10.1.11 -p 80 -c 3
+sudo hping3 -A 10.10.1.11 -p 80 -c 3
+sudo hping3 -F -P -U 10.10.1.11 -p 80 -c 3
+sudo hping3 -8 1-100 -S 10.10.1.11 -V
 ```
 
-**Sample output:** see section 3.11 for a reading of the SYN+spoofed-source example and the reasoning behind why the real reply is never seen by the attacker in a basic spoof.
+Scenario: the first command is the slide example limited to 5 packets. The second sends a SYN to port 80 three times. The third sends an ACK probe to see if a firewall lets it through. The fourth sends FIN, PSH, and URG together. The fifth scans ports 1 to 100 with SYN packets and prints details.
 
-**Common mistakes:** expecting to see the victim's reply after spoofing the source with -a (the reply goes to the spoofed address, not back to you, as explained in 3.11); forgetting that --scan still honors the chosen flag (-S, and so on), so you must still pick a probe type even in scan mode.
-
-**What the exam asks:** that -a (or --spoof) is the Hping3 flag for IP spoofing; that spoofed scans cannot complete a real TCP handshake; that --scan turns Hping3 into a basic port scanner while keeping its crafting flexibility.
-
-### 5.6 Nmap Output and Timing Options (ADDED CONTEXT)
-
-**Purpose:** Control how fast a scan runs and how its results are saved, independent of which scan type is chosen.
-
-```bash
-nmap -T0|1|2|3|4|5 TARGET
-nmap -oN file.txt | -oX file.xml | -oG file.gnmap | -oA basename TARGET
-nmap -iL targets.txt
-nmap -n TARGET
-```
-
-| Flag | Meaning | When to use | Example |
-| --- | --- | --- | --- |
-| -T0 to -T5 | Timing template, 0 slowest/stealthiest to 5 fastest | Balance speed vs. detection risk | -T2 |
-| -oN file | Save normal (human-readable) output | Keep a readable log | -oN scan.txt |
-| -oX file | Save XML output | Feed into other tools or reports | -oX scan.xml |
-| -oG file | Save "grepable" output | Quick command-line parsing | -oG scan.gnmap |
-| -oA basename | Save all three formats at once | Convenience | -oA scan |
-| -iL file | Read target list from a file | Scan many hosts from a list | -iL targets.txt |
-| -n | Skip DNS resolution | Speed up large scans | -n |
-| -v, -vv | Increase verbosity (one or two levels) | See more detail while running | -vv |
-
-**Demo command:**
-
-```bash
-sudo nmap -sS -T2 -n -oA client_scan -iL targets.txt
-```
-
-**Common mistakes:** choosing a very fast timing template (-T4 or -T5) on a fragile or low-bandwidth network, causing dropped probes that look like filtering; forgetting that -T0 and -T1 can make a large scan take hours or days.
-
-**What the exam asks:** that -T controls speed and stealth trade-off, not scan type; which output flag produces which file format.
-
-### 5.7 Reading OS Clues in Wireshark and tcpdump (ADDED CONTEXT)
-
-**Purpose:** Passively read TTL and TCP window size from a captured packet to guess the target OS (section 3.8), without sending any extra probe.
-
-```bash
-tcpdump -nn -i eth0 host 10.10.1.11 and tcp
-```
-
-| Field (Wireshark path) | Meaning | Example value | Clue |
-| --- | --- | --- | --- |
-| Internet Protocol Version 4 > Time to live | IP header TTL | 128 | Likely Windows |
-| Transmission Control Protocol > Window size value | TCP header window | 5840 | Likely Linux |
-| [Calculated window size] | Window after scaling | 65535 | Confirms scaling is active |
-
-**Demo (tcpdump, flag letters):**
+**Sample output (SYN probe to an open port):**
 
 ```text
-10.10.1.5.51514 > 10.10.1.11.80: Flags [S], seq 10, win 64240
-10.10.1.11.80 > 10.10.1.5.51514: Flags [S.], seq 1, ack 11,
-  win 8192, ttl 128
+HPING 10.10.1.11 (eth0 10.10.1.11): S set, 40 headers + 0 data bytes
+len=44 ip=10.10.1.11 ttl=128 DF id=1234 sport=80 flags=SA seq=0
+    win=65535 rtt=0.5 ms
+len=44 ip=10.10.1.11 ttl=128 DF id=1235 sport=80 flags=SA seq=1
+    win=65535 rtt=0.4 ms
+
+--- 10.10.1.11 hping statistic ---
+2 packets transmitted, 2 packets received, 0% packet loss
 ```
 
-How to read it: [S] = SYN only, [S.] = SYN+ACK, [.] = ACK only, [F] = FIN, [R] = RST, [P] = PSH, [U] = URG. The second line's "ttl 128" and "win 8192" match the Windows row in the OS table from section 3.8.
+How to read it: "S set" is the flag you sent. flags=SA means the reply was SYN+ACK, so port 80 is open. flags=RA (RST+ACK) would mean closed. No reply means filtered. ttl=128 and win=65535 are OS clues (Windows, see 3.17). Each reply line is wrapped here for width.
 
-**Common mistakes:** reading the TTL of the wrong packet (the client's own outgoing packet, not the target's reply); forgetting that TTL decreases with hop count, so a captured value may be slightly below the OS default.
-
-**What the exam asks:** matching a given TTL/window pair to the closest OS in the reference table from section 3.8.
-
-### 5.8 Netcat and Telnet Banner Grabbing (ADDED CONTEXT)
-
-**Purpose:** Manually connect to a service port and read whatever banner it sends first, a simple form of active banner grabbing (section 3.13).
-
-```bash
-nc -nv TARGET PORT
-telnet TARGET PORT
-```
-
-| Flag | Meaning | When to use | Example |
-| --- | --- | --- | --- |
-| -n (nc) | Skip DNS resolution | Speed, or target has no DNS entry | nc -nv 10.10.1.11 21 |
-| -v (nc) | Verbose, show connection status | Confirm the connection opened | nc -nv 10.10.1.11 80 |
-
-**Demo and sample output:**
-
-```bash
-nc -nv 10.10.1.11 21
-```
+**Sample output (the spoofed command from the slide):**
 
 ```text
-(UNKNOWN) [10.10.1.11] 21 (ftp) open
-220 Microsoft FTP Service
+HPING www.certifiedhacker.com (eth0 203.0.113.10): NO FLAGS are set,
+40 headers + 0 data bytes
+
+--- www.certifiedhacker.com hping statistic ---
+5 packets transmitted, 0 packets received, 100% packet loss
 ```
 
-How to read it: the first line confirms Netcat opened a raw TCP connection to port 21. The second line is the banner the FTP service sent immediately, unprompted, naming the exact product.
+How to read it: 5 packets went out and none came back. This is expected. The target replied to 7.7.7.7, not to the attacker. This proves the slide's note: you cannot finish a handshake with a spoofed address, and you do not see the replies. The address 203.0.113.10 is a documentation example.
 
-**Common mistakes:** expecting every service to send a banner immediately (some, such as a plain HTTP server, only reply after you send a request, for example GET / HTTP/1.0 followed by two newlines); treating a banner as absolute proof rather than a clue (banners can be edited or faked by a defender).
+**Common mistakes:** Running without sudo. Spoofing and then waiting for replies. Sending flood options (--flood) at systems you do not own. Using -X for Xmas. Typing the program name with a capital H on Linux.
 
-**What the exam asks:** that this manual technique is a simple, direct form of active banner grabbing, distinct from the TTL/window method (passive, section 3.8) and from reading error pages or URL extensions (passive, section 3.13).
+**What the exam asks:** That -a spoofs the source address. That Hping3 builds custom packets and can scan, ping, trace, and test firewalls. That 100% packet loss is normal for spoofed probes.
+
+### 5.11 Supporting Commands: Wireshark Filters, Banner Grabbing, and ShellGPT
+
+**Purpose:** Read OS clues, grab banners, and let an AI tool write scan commands. These are ADDED CONTEXT; the notes show the Wireshark screens and the banner grabbing concept but no exact commands.
+
+**Wireshark display filters (type in the filter bar):**
+
+| Filter | Meaning | When to use | Example |
+| --- | --- | --- | --- |
+| ip.ttl == 128 | Packets with TTL 128 | Spot Windows | ip.ttl == 128 |
+| ip.src == IP | Packets from one host | Focus on the target | ip.src == 10.10.1.11 |
+| tcp.flags.syn == 1 | SYN packets | Find scan starts | tcp.flags.syn == 1 |
+| tcp.flags.reset == 1 | RST packets | See closed ports | tcp.flags.reset == 1 |
+| tcp.window_size_value | TCP window size field | Compare with the table | tcp.window_size_value == 5840 |
+
+Filter names are standard Wireshark fields (verify for your version).
+
+**Banner grabbing commands:**
+
+```bash
+nc -v 10.10.1.11 80
+curl -I http://10.10.1.11
+sudo nmap -sV --script=banner -p 21,22,80 10.10.1.11
+```
+
+Breakdown: nc -v = Netcat in verbose mode, then host and port. After connecting, type HEAD / HTTP/1.0 and press Enter twice. curl -I = fetch only the HTTP response headers. The Nmap line runs the banner script on three ports.
+
+```text
+HTTP/1.1 200 OK
+Server: Microsoft-IIS/10.0
+X-Powered-By: ASP.NET
+```
+
+How to read it: the Server header names the web server and version. X-Powered-By names the framework. Together they say Windows with IIS.
+
+**ShellGPT (AI command helper):**
+
+```bash
+sgpt --shell "nmap command: ping sweep of 10.10.1.0/24, no ports"
+sgpt --shell "nmap OS detection and versions for 10.10.1.11"
+```
+
+Typical answers: nmap -sn 10.10.1.0/24 and sudo nmap -O -sV 10.10.1.11. ShellGPT then offers [E]xecute, [D]escribe, [A]bort. Use D to read what the command does before pressing E. The flags --shell and --describe-shell are described in the Module 02 guide.
+
+**Common mistakes:** Running an AI-written command without reading it. Pasting a real client address into a public AI service. Forgetting that Netcat needs the HEAD line plus two Enter presses.
+
+**What the exam asks:** That banner grabbing can use Telnet, Netcat, or curl. That TTL and window can be filtered in Wireshark. That AI tools generate commands, but the human must verify them.
 
 ## 6. Ports, Protocols, Standards and Acronyms
 
-### 6.1 Ports Seen in This Module
+### 6.1 Ports Seen in Your Screenshots
 
-| Port | Service | Simple purpose | Weakness attackers look for |
-| --- | --- | --- | --- |
-| 21/tcp | ftp | File transfer, control channel | Cleartext login, old server versions |
-| 53 | domain (DNS) | Name resolution | Open UDP ping/scan target, zone data |
-| 80/tcp | http | Web traffic | Reveals web server and OS via banners |
-| 135/tcp | msrpc | Microsoft RPC endpoint mapper | Entry point to many Windows services |
-| 139/tcp | netbios-ssn | NetBIOS session service | Legacy Windows file/print sharing |
-| 161 | snmp | Device monitoring and management | Weak/default community strings |
-| 443/tcp | https | Encrypted web traffic | Still fingerprinted via TLS/cert data |
-| 445/tcp | microsoft-ds | SMB file sharing | Shares, known SMB exploits |
-| 1900 | ssdp | UPnP device discovery | Device enumeration, DoS reflection |
-| 3389/tcp | ms-wbt-server | Remote Desktop Protocol (RDP) | Exposed remote admin access |
+Every Nmap result in the notes shows the same six open ports on 10.10.1.11, a Windows host. Learn what each means.
 
-### 6.2 Protocol Layer Reference
-
-| Protocol | Simple purpose | Layer | Known weakness | Related tool/technique |
+| Port | Service name in Nmap | Simple purpose | Known weakness | Related attack or tool |
 | --- | --- | --- | --- | --- |
-| TCP | Reliable, connection-based transport | Transport | Handshake and flags can be probed | Nmap -sT/-sS/-sX/-sF/-sN/-sM/-sA/-sW |
-| UDP | Fast, connectionless transport | Transport | No handshake, slow to scan fully | Nmap -sU |
-| ICMP | Error and control messages | Network | Reveals live hosts and routers | Ping scans (3.5), traceroute |
-| ARP | Resolves IP to MAC on a LAN | Link | Always answered, hard to block | ARP ping (-PR, 3.5) |
-| SCTP | Reliable transport for telephony signalling | Transport | INIT/COOKIE chunks probed like TCP flags | Nmap -sY/-sZ |
-| SSDP/UPnP | Device discovery over multicast | Application | Open by default on many devices | SSDP scanning, reflection DoS |
-| IPv6 | Next-generation addressing (128-bit) | Network | Huge space, less filtered, no ARP (uses ND) | Nmap -6 |
+| 21/tcp | ftp | File transfer | Clear text, anonymous login | Brute force, sniffing |
+| 80/tcp | http | Web pages | Old servers have exploits | Web attacks, banner grab |
+| 135/tcp | msrpc | Windows remote procedure calls | Used for remote exploits | Enumeration, DCOM abuse |
+| 139/tcp | netbios-ssn | NetBIOS session (old file sharing) | Leaks names and shares | Enumeration (Module 04) |
+| 445/tcp | microsoft-ds | SMB file sharing over TCP | EternalBlue-type flaws | Exploits, relay attacks |
+| 3389/tcp | ms-wbt-server | Remote Desktop (RDP) | Weak passwords, BlueKeep | Brute force, RDP exploits |
 
-### 6.3 TCP Flags Quick Reference
+Demo ports in the source port slide: 242 (the real source port, blocked) and 80 (the manipulated source port, allowed). Port 242 has no special meaning here. It is just a number the firewall does not trust.
 
-| Flag | Full name | One-line meaning |
+> **ADDED CONTEXT:** "ms-wbt-server" is Nmap's name for the Windows Terminal Services (Remote Desktop) service. "WBT" stands for Windows-Based Terminal. "microsoft-ds" means Microsoft Directory Services, which is SMB on port 445.
+
+### 6.2 Other Ports Often Asked (ADDED CONTEXT)
+
+| Port | Service | Simple purpose | Known weakness | Related attack or tool |
+| --- | --- | --- | --- | --- |
+| 20 and 21 | FTP | Data and control for file transfer | Clear text | Sniffing, bounce scan |
+| 22 | SSH | Encrypted remote shell | Weak passwords | Brute force |
+| 23 | Telnet | Old remote shell | Clear text | Sniffing, banner grab |
+| 25 | SMTP | Mail sending | Open relay, user listing | Enumeration, spam |
+| 53 | DNS (UDP and TCP) | Name lookup | Zone transfer, spoofing | Recon, source port 53 trick |
+| 67 and 68 | DHCP (UDP) | IP address leasing | Rogue server | DHCP starvation |
+| 69 | TFTP (UDP) | Simple file transfer | No authentication | Config theft |
+| 110 | POP3 | Mail download | Clear text | Sniffing |
+| 123 | NTP (UDP) | Time sync | Amplification | DDoS |
+| 137 to 139 | NetBIOS | Names and sessions | Info leak | nbtstat, enumeration |
+| 143 | IMAP | Mail access | Clear text | Sniffing |
+| 161 and 162 | SNMP (UDP) | Device management | Default community strings | Enumeration |
+| 389 | LDAP | Directory service | Anonymous bind | Enumeration |
+| 443 | HTTPS | Encrypted web | Old TLS | Heartbleed-type flaws |
+| 514 | Syslog (UDP) | Log transfer | Spoofable | Log forgery |
+| 1433 | MS SQL Server | Database | Weak sa password | SQL attacks |
+| 1900 | SSDP (UDP) | UPnP discovery | Reflection, UPnP flaws | SSDP scan, DDoS |
+| 3306 | MySQL | Database | Weak passwords | Brute force |
+| 5900 | VNC | Remote screen | Weak passwords | Brute force |
+| 8080 | HTTP alternate | Proxies, web apps | Open proxies | Proxy abuse (3.28) |
+
+Port numbers are standard defaults and can be changed. A service on a non-standard port is why version detection (-sV) exists.
+
+### 6.3 Protocols and the Layer They Work At
+
+| Protocol | Layer (OSI) | Simple purpose | Weakness | Related attack or tool |
+| --- | --- | --- | --- | --- |
+| IP | 3 Network | Addressing and routing | Spoofing, fragmentation | Hping3 -a, Nmap -f |
+| ICMP | 3 Network | Errors and tests (ping) | Ping sweeps, tunnels | -PE, -PP, -PM |
+| ARP | 2 Data link | Maps IP to MAC | No authentication | -PR, ARP spoofing |
+| TCP | 4 Transport | Reliable connection | Handshake can be probed | -sT, -sS, -sX |
+| UDP | 4 Transport | Connectionless messages | No handshake, easy spoofing | -sU, -PU |
+| SCTP | 4 Transport | Multi-stream messages | Rarely filtered | -sY, -sZ |
+| SSDP | 7 Application | UPnP discovery | Reflection, exposure | SSDP scan |
+| IPv6 | 3 Network | Next-generation addressing | Forgotten firewall rules | nmap -6 |
+
+OSI layer quick recall (ADDED CONTEXT): 1 Physical, 2 Data link, 3 Network, 4 Transport, 5 Session, 6 Presentation, 7 Application. Mnemonic: "Please Do Not Throw Sausage Pizza Away".
+
+### 6.4 ICMP Types to Know (ADDED CONTEXT)
+
+Verify against RFC 792 if you need an exact value. Types 0, 3, 8, and 11 are the most asked.
+
+| Type | Name | Used for | Related to this module |
+| --- | --- | --- | --- |
+| 0 | Echo reply | Answer to ping | Reply to -PE |
+| 3 | Destination unreachable | Errors (code 3 = port unreachable) | UDP scan, -PU, filter outbound |
+| 5 | Redirect | Tell a host to use another router | Route tampering |
+| 8 | Echo request | Ping | -PE |
+| 11 | Time exceeded | TTL reached 0 | Traceroute |
+| 13 | Timestamp request | Ask for time | -PP |
+| 14 | Timestamp reply | Time answer | Reply to -PP |
+| 17 | Address mask request | Ask for subnet mask | -PM |
+| 18 | Address mask reply | Mask answer | Reply to -PM |
+
+Common type 3 codes: 0 network unreachable, 1 host unreachable, 2 protocol unreachable, 3 port unreachable, 4 fragmentation needed (Path MTU Discovery), 13 communication administratively prohibited (a firewall said no). Nmap treats codes 1, 2, 9, 10, and 13 as "filtered" (verify).
+
+### 6.5 TCP Flags and Reply Patterns
+
+| Item | Value or pattern | Meaning |
 | --- | --- | --- |
-| URG | Urgent | Process this data immediately |
-| ACK | Acknowledgement | Confirms receipt of data |
-| PSH | Push | Deliver buffered data now |
-| RST | Reset | Abruptly ends a connection |
-| SYN | Synchronize | Starts a new connection |
-| FIN | Finish | Politely ends a connection |
+| SYN then SYN/ACK | Open port | Handshake step 2 |
+| SYN then RST | Closed port | Nothing listens |
+| SYN then no reply | Filtered | Firewall drops |
+| FIN, NULL, Xmas then RST | Closed port | RFC 793 behavior |
+| FIN, NULL, Xmas then silence | Open or filtered | Cannot tell |
+| ACK then RST | Unfiltered | Packet reached host |
+| ACK then silence | Filtered | Firewall blocks |
+| UDP then ICMP type 3 code 3 | Closed | Port unreachable |
+| UDP then silence | Open or filtered | No error returned |
+| INIT then INIT-ACK | SCTP open | Handshake step 2 |
+| INIT then ABORT | SCTP closed | Rejected |
 
-### 6.4 ICMP Types Used in Scanning
+### 6.6 OS Fingerprint Table from the Notes
 
-| Type | Name | Used for |
+| Operating system | TTL | TCP window size |
 | --- | --- | --- |
-| 0 | Echo reply | Answer to a ping |
-| 3 | Destination unreachable | Code 3 = port unreachable (closed UDP port) |
-| 8 | Echo request | Ping probe (-PE) |
-| 11 | Time exceeded | Traceroute hop discovery |
-| 13 / 14 | Timestamp request / reply | -PP host discovery |
-| 17 / 18 | Address mask request / reply | -PM host discovery |
+| Linux | 64 | 5840 |
+| FreeBSD | 64 | 65535 |
+| OpenBSD | 255 | 16384 |
+| Windows | 128 | 65,535 bytes to 1 gigabyte |
+| Cisco routers | 255 | 4128 |
+| Solaris | 255 | 8760 |
+| AIX | 255 | 16384 |
 
-### 6.5 Rare Protocols, Short Introductions
+### 6.7 Standards, Specifications, and Concepts
 
-- **SCTP (Stream Control Transmission Protocol):** a transport protocol, IP protocol number 132, built for telephony signalling (SS7 over IP) and used in some mobile core network interfaces. Network engineers in telecom use it. Attackers care because it has its own four-way handshake (INIT, INIT-ACK, COOKIE-ECHO, COOKIE-ACK) that can be probed the same way TCP's three-way handshake is probed, and because it is less commonly filtered than TCP or UDP, so it can slip past firewalls tuned only for the two common transports.
-- **SSDP (Simple Service Discovery Protocol) and UPnP (Universal Plug and Play):** SSDP is the discovery half of UPnP, running over UDP port 1900 with multicast address 239.255.255.250. Home and office users rely on it so that routers, smart TVs, cameras, and printers can find each other automatically. Attackers care because it often runs with no authentication by default, it reveals the make and model of devices through M-SEARCH replies, and it has been abused as a reflection and amplification vector in denial-of-service attacks (covered further in Module 10).
-- **ICMP timestamp and address mask queries:** these two ICMP query types were designed to let a host ask for the current time or its own subnet mask from another host. Few systems answer them meaningfully today, but administrators who remember to block ICMP echo often forget these two, so a reply to either one still proves a host is alive (section 3.5).
+| Item | What it is | Why it matters here |
+| --- | --- | --- |
+| RFC 793 | The original TCP specification | Explains why FIN, NULL, Xmas work on some OSes |
+| RFC 792 | ICMP specification | Defines echo, timestamp, mask messages |
+| RFC 791 | IP specification | Defines fragmentation and source route options |
+| RFC 4960 | SCTP specification | Defines INIT, COOKIE ECHO handshake |
+| RFC 2827 (BCP 38) | Network ingress filtering | Standard defense against IP spoofing |
+| CPE | Common Platform Enumeration | Naming used in Nmap OS and service output |
+| CVE | Common Vulnerabilities and Exposures | ID of a known vulnerability |
+| OUI | First 3 bytes of a MAC address | Identifies the card vendor |
 
-### 6.6 Acronyms
+RFC numbers are ADDED CONTEXT. Verify before quoting.
 
-| Acronym | Meaning |
-| --- | --- |
-| TCP | Transmission Control Protocol |
-| UDP | User Datagram Protocol |
-| ICMP | Internet Control Message Protocol |
-| ARP | Address Resolution Protocol |
-| SCTP | Stream Control Transmission Protocol |
-| SSDP | Simple Service Discovery Protocol |
-| UPnP | Universal Plug and Play |
-| TTL | Time To Live |
-| MTU | Maximum Transmission Unit |
-| IDS | Intrusion Detection System |
-| IPS | Intrusion Prevention System |
-| OUI | Organizationally Unique Identifier |
-| MAC | Media Access Control (hardware address) |
-| ISN | Initial Sequence Number |
-| ACL | Access Control List |
-| NAC | Network Access Control |
-| CPE | Common Platform Enumeration |
-| NSE | Nmap Scripting Engine |
-| RDP | Remote Desktop Protocol |
-| SMB | Server Message Block |
-| RPC | Remote Procedure Call |
-| SOC | Security Operations Center |
-| BCP 38 | Best Current Practice 38, network ingress filtering standard |
+### 6.8 Acronyms Used in This Module
+
+| Acronym | Meaning | One-line use |
+| --- | --- | --- |
+| ACK | Acknowledgement | TCP flag: I got it |
+| AIX | Advanced Interactive eXecutive | IBM Unix, TTL 255 |
+| ARP | Address Resolution Protocol | IP to MAC |
+| CIDR | Classless Inter-Domain Routing | Subnet notation such as /24 |
+| FIN | Finish | TCP flag: no more data |
+| ICMP | Internet Control Message Protocol | Ping and errors |
+| IDS | Intrusion Detection System | Alerts on attacks |
+| IPID | IP Identification | Counter used in idle scan |
+| IPS | Intrusion Prevention System | Blocks attacks |
+| ISN | Initial Sequence Number | Start number of a TCP session |
+| MAC | Media Access Control | Hardware address |
+| MTU | Maximum Transmission Unit | Largest packet on a link |
+| NSE | Nmap Scripting Engine | Extra Nmap checks |
+| PSH | Push | TCP flag: send now |
+| RST | Reset | TCP flag: abort |
+| SCTP | Stream Control Transmission Protocol | TCP/UDP alternative |
+| SSDP | Simple Service Discovery Protocol | UPnP discovery |
+| SYN | Synchronize | TCP flag: start |
+| TCP | Transmission Control Protocol | Reliable transport |
+| TTL | Time To Live | Hop counter |
+| UDP | User Datagram Protocol | Connectionless transport |
+| URG | Urgent | TCP flag: priority data |
+| UPnP | Universal Plug and Play | Auto device setup |
 
 ## 7. Attack vs Countermeasure and Look-alike Comparisons
 
-### 7.1 Scanning Technique vs Countermeasure
+### 7.1 Attack or Technique vs Countermeasure
 
-| Scanning technique | What it achieves | Best countermeasure |
+| Attack or technique | Main countermeasure | Extra countermeasure |
 | --- | --- | --- |
-| ICMP/ARP/UDP/TCP/protocol ping scans | Finds which hosts are alive | Filter ICMP types, limit ARP to local segment, stateful firewall |
-| TCP connect scan (-sT) | Finds open ports, fully logged | Firewall/IDS rules, update firmware |
-| TCP SYN scan (-sS) | Finds open ports, quieter | Same, plus detect half-open connection floods |
-| Xmas, FIN, NULL, Maimon scans | Try to slip past simple filters | Stateful inspection, not simple flag-based rules |
-| ACK and window scans | Map firewall rule behavior | Anti-scanning rules, stateful firewall that drops stray ACKs |
-| UDP scan | Finds open UDP services | Rate-limit ICMP unreachable, block unused UDP ports |
-| Idle scan (zombie) | Hides the real scanner's IP | Anti-spoofing rules, egress filtering |
-| Packet fragmentation | Hides probe from simple filters | Reassemble before inspecting (stateful FW/IDS) |
-| Source routing | Routes around a firewalled router | Disable IP source routing on routers |
-| Source port manipulation | Exploits port-based trust rules | Never trust by source port alone |
-| IP address decoy | Hides the real scanner among fakes | Anti-scanning rules, routing plausibility checks |
-| IP address spoofing | Hides or fakes the sender's identity | Ingress/egress filtering, random ISN |
-| MAC address spoofing | Fakes the sender's hardware identity | 802.1X, switch port security |
-| Creating custom packets | Avoids a tool-signature-based filter | Behavior-based detection, not signatures |
-| Randomizing host order | Avoids an obvious sequential pattern | Detect scan behavior, not sequence alone |
-| Sending bad checksums | Tests if a device answers without checking | Ensure devices properly validate checksums |
-| Proxy servers / anonymizers | Hides scanner behind another relay | Block known relay ranges, behavior detection |
+| Ping sweep (ICMP echo) | Filter inbound ICMP at the edge | IDS alert on many pings |
+| ICMP timestamp or mask ping | Block ICMP types 13 and 17 | Allow only needed ICMP |
+| ARP ping scan | VLAN segmentation | Port security, DAI |
+| UDP ping | Drop unneeded UDP | Filter outbound ICMP type 3 |
+| TCP SYN or ACK ping | Stateful firewall | Rate limit, IDS rule |
+| TCP connect scan | Close unused ports | Connection-rate alerts |
+| SYN (half-open) scan | Firewall and IDS rules | SYN flood protection |
+| FIN, NULL, Xmas scans | Stateful firewall | IDS signatures |
+| ACK scan | Stateful firewall | Drop stray ACKs |
+| Idle (IPID) scan | Ingress and egress filtering | Random IPID on hosts |
+| UDP scan | Block unneeded UDP | Disable SNMP v1 and v2 |
+| SCTP scan | Filter SCTP at the edge | Allow known peers only |
+| SSDP scan | Disable UPnP | Block UDP 1900 inbound |
+| IPv6 scan | Same firewall rules for IPv6 | Disable unused IPv6 |
+| Service version discovery | Hide banners, patch | WAF or reverse proxy |
+| Banner grabbing | Remove version strings | Custom error pages |
+| OS fingerprinting | Alter TCP stack values | Reverse proxy |
+| Packet fragmentation | Reassemble before inspecting | Drop tiny fragments |
+| Source routing | Disable IP source routing | Drop source-route options |
+| Source port manipulation | Stateful inspection | Do not trust source ports |
+| IP address decoy | Log correlation, path tracing | Ingress and egress filtering |
+| IP spoofing | Ingress and egress filtering | Random ISN, no IP trust |
+| MAC spoofing | 802.1X, port security | DAI, DHCP snooping |
+| Bad checksums | Firewall verifies checksums | Update firmware |
+| Randomized host order | Long-window IDS correlation | Alert on source totals |
+| Proxies and anonymizers | Block known proxy and Tor IPs | Egress filtering |
+| Custom crafted packets | Stateful firewall, DPI | Malformed-packet IDS rules |
 
 ### 7.2 Look-alike Pairs
 
-| X vs Y | Difference in one line | How to tell in a question |
+| Pair | The difference in one line | How to tell in a question |
 | --- | --- | --- |
-| Footprinting vs scanning | Collect public info vs send probes to the target | "Sent a packet" or "ran Nmap" = scanning |
-| -sn vs -Pn | -sn = ping only, no port scan; -Pn = skip ping, scan anyway | Which step does the flag skip? |
-| -PS vs -sS | -PS = TCP SYN host discovery probe; -sS = TCP SYN port scan | "Host discovery" vs "port scan" in the question |
-| -PU vs -sU | -PU = UDP host discovery probe; -sU = UDP port scan | Same pattern as above |
-| -sT vs -sS | Connect = full handshake, no root; SYN = half-open, needs root | "Does not complete the handshake" = SYN |
-| -sX/-sF/-sN vs -sM | Xmas/FIN/NULL use no-reply = open; Maimon's probe is FIN+ACK | Which exact flags are set |
-| -sA vs -sW | ACK never shows "open"; Window reads RST window field | "Never determines open" = ACK alone |
-| -sS vs -sY | TCP SYN scan vs SCTP INIT scan, same idea on different protocols | Check which transport protocol is named |
-| IP spoofing vs IP decoy | Spoofing replaces the real source; decoy adds fakes beside it | "Cannot see reply" = spoofing; "hidden in a crowd" = decoy |
-| IP spoofing vs MAC spoofing | IP fakes the routed address; MAC fakes the local link | Is the field an IP or a hardware address? |
-| Source routing vs source port manipulation | Routing controls the path; port manip. fakes the sender's port | "Route around a router" vs "pretend to be port 80" |
-| Active vs passive banner grabbing | Active crafts packets; passive reads errors or traffic | "Crafted packets" = active; "error" = passive |
-| Ingress filtering vs egress filtering | Ingress checks traffic IN; egress checks traffic OUT | Which direction does the question describe? |
-| Proxy server vs anonymizer | A proxy is one relay; an anonymizer is a wider network | Is it one relay or a whole hiding network? |
+| -sn vs -Pn | -sn pings only. -Pn skips the ping | "No port scan" vs "treat as up" |
+| -sT vs -sS | Connect finishes the handshake. SYN does not | "Full open" vs "half-open" |
+| -PS vs -sS | -PS is a ping. -sS is a port scan | Ping asks "alive?" Scan asks "open?" |
+| -PU vs -sU | -PU is host discovery. -sU is a UDP port scan | Same logic |
+| Xmas vs NULL | Xmas sets FIN+PSH+URG. NULL sets nothing | "Christmas tree" vs "no flags" |
+| FIN vs Maimon | FIN sets FIN only. Maimon sets FIN+ACK | Look for ACK |
+| ACK scan vs ACK ping | ACK scan maps firewalls. ACK ping finds hosts | "Filtered or unfiltered" vs "host up" |
+| Decoy vs idle scan | Decoy hides among fakes. Idle hides completely | "Zombie" or "IPID" -> idle |
+| Decoy vs spoofing | Decoy keeps your real IP in the mix | "Several scanners" -> decoy |
+| IP vs MAC spoofing | Layer 3 address vs Layer 2 address | "Hardware address" -> MAC |
+| Source routing vs source port | Path chosen vs port number faked | "Route" vs "port" |
+| -g vs -p | -g source port. -p destination ports | "Appear to come from" vs "scan" |
+| -D vs -d | Capital D is decoy. Lowercase d is debug | Check the case |
+| -f vs --mtu | -f uses 8-byte fragments. --mtu sets your size | A number given -> --mtu |
+| -sV vs -O | Version of a service vs OS guess | "Service version" vs "OS" |
+| Active vs passive banner grab | Active sends packets. Passive only listens or reads | "Error messages", "sniffing" -> passive |
+| Ingress vs egress | In to your network vs out of your network | Direction of the packet |
+| Port scan vs vulnerability scan | Open ports vs known weaknesses | Module 03 vs Module 05 |
+| Scanning vs enumeration | Find hosts and ports vs extract details | Module 03 vs Module 04 |
+| Proxy vs VPN | Forwards traffic vs encrypts the tunnel | "Encrypted tunnel" -> VPN |
+| Fragmentation vs segmentation | IP layer pieces vs TCP layer pieces | Layer 3 vs Layer 4 |
+| Half-open scan vs SYN flood | A scan vs a DoS attack | Purpose of the traffic |
 
 ## 8. Exam Cheat Sheet
 
-### 8.1 Keyword -> Answer
+### 8.1 Keyword -> Answer Pairs
 
 | If the question says | Think |
 | --- | --- |
-| "identify hosts, ports, and services" | Network scanning (phase 2) |
-| "no further transmissions" | FIN flag |
-| "processed immediately" | URG flag |
-| "acknowledges receipt" | ACK flag |
-| "sends buffered data immediately" | PSH flag |
-| "resets a connection" | RST flag |
-| "initiates a connection" | SYN flag |
-| "ARP request/reply, local LAN, most reliable" | ARP ping (-PR) |
-| "ICMP timestamp or address mask query" | -PP / -PM host discovery |
-| "ping scan only, no port scan" | -sn |
-| "skip host discovery" | -Pn |
-| "full TCP handshake completed, no root needed" | TCP connect scan (-sT) |
-| "half-open, does not complete handshake" | TCP SYN scan (-sS) |
-| "FIN + PSH + URG" | Xmas scan (-sX) |
-| "no flags at all" | NULL scan (-sN) |
-| "FIN + ACK, BSD-derived systems" | Maimon scan (-sM) |
-| "never shows open, maps firewall rules" | ACK scan (-sA) |
-| "reads the TCP window of a RST reply" | Window scan (-sW) |
-| "uses a zombie host and its IP ID" | Idle scan (-sI) |
-| "ICMP port unreachable means closed" | UDP scan (-sU) |
-| "INIT / INIT-ACK / ABORT" | SCTP INIT scan (-sY) |
-| "detects service name and version" | -sV |
-| "guesses the operating system" | -O (or -A for the full bundle) |
-| "TTL and TCP window size of the first packet" | Passive OS guess (section 3.8) |
-| "specially crafted packets compared to a database" | Active banner grabbing |
-| "error messages, sniffed traffic, or URL extension" | Passive banner grabbing |
-| ".aspx in the URL" | IIS server, Windows platform |
-| "split the probe into small IP fragments" | Packet fragmentation (-f) |
-| "originator dictates the route" | Source routing (--ip-options) |
-| "firewall trusts a well-known source port" | Source port manipulation (-g) |
-| "decoys mixed with the real scanner" | IP address decoy (-D) |
-| "attack appears to come from someone else, cannot see the reply" | IP address spoofing (-a in Hping3) |
-| "fake hardware address, needs raw socket" | MAC address spoofing (--spoof-mac) |
-| "build a packet field by field" | Packet crafting tool (Colasoft, NetScanTools Pro) |
-| "scan hosts out of sequence" | Randomizing host order (--randomize-hosts) |
-| "deliberately invalid checksum" | Sending bad checksums (--badsum) |
-| "relay through another server" | Proxy server |
-| "hide identity through a broader network" | Anonymizer (Tor) |
-| "checks traffic coming into your network" | Ingress filtering |
-| "checks traffic leaving your network" | Egress filtering |
-| "do not trust a connection by address alone" | No IP-based authentication |
+| Identify hosts, ports, and services | Network scanning |
+| Does not complete the three-way handshake | Half-open (SYN) scan, -sS |
+| Completes the handshake, no root rights | TCP connect scan, -sT |
+| FIN, PSH, URG flags set | Xmas scan, -sX |
+| No flags set | NULL scan, -sN |
+| Only FIN flag set | FIN scan, -sF |
+| FIN and ACK flags | Maimon scan, -sM |
+| Open port gives no reply, closed gives RST | Inverse TCP flag scan |
+| Does not work against Windows | FIN, NULL, Xmas |
+| Determine firewall rules, filtered or unfiltered | ACK scan, -sA |
+| TTL and window of RST packets | ACK scan variants (TTL-based, window) |
+| Zombie, IPID, attacker IP hidden | Idle scan, -sI |
+| ICMP port unreachable | UDP scan (closed port) |
+| INIT chunk | SCTP INIT scan, -sY |
+| COOKIE ECHO chunk | SCTP COOKIE ECHO scan, -sZ |
+| UPnP, UDP 1900 | SSDP scanning |
+| 128-bit addresses | IPv6 scanning, -6 |
+| Service version | -sV |
+| ICMP echo (type 8) | -PE |
+| ICMP timestamp (type 13) | -PP |
+| ICMP address mask (type 17) | -PM |
+| ARP request, local subnet | -PR |
+| UDP probe for host discovery | -PU |
+| TCP SYN ping | -PS |
+| TCP ACK ping | -PA |
+| IP protocol ping | -PO |
+| Ping scan, no ports | -sn |
+| Skip host discovery | -Pn |
+| TTL 128 | Windows |
+| TTL 64 | Linux or FreeBSD |
+| TTL 255 | Cisco, Solaris, AIX, OpenBSD |
+| Splits the TCP header across packets | Fragmentation, -f |
+| Appears to come from port 80 or 53 | Source port manipulation, -g |
+| Several IPs appear to scan | Decoy, -D |
+| Source IP changed | IP spoofing, hping3 -a |
+| Hardware address changed | MAC spoofing, --spoof-mac |
+| Random order of targets | --randomize-hosts |
+| Bogus checksum | --badsum |
+| Sender picks the path | Source routing |
+| Creates custom packets | Colasoft Packet Builder, NetScanTools Pro |
+| Error messages, sniffing, .aspx | Passive banner grabbing |
+| Crafted packets compared to a database | Active banner grabbing |
+| Drops incoming packets with internal source IP | Ingress filtering |
+| Drops outgoing packets with invalid source IP | Egress filtering |
+| Predictable sequence numbers | Use random initial sequence number |
 
-### 8.2 Must-memorize Lists and Numbers
+### 8.2 Must-memorize Lists
 
-- Five-phase model position: scanning is phase 2 (after reconnaissance, before gaining access).
-- TCP flags: 6 (URG, ACK, PSH, RST, SYN, FIN).
-- Three-way handshake: 3 packets (SYN, SYN+ACK, ACK). Termination: 4 packets (FIN, ACK, FIN, ACK).
-- Host discovery flags: 8 (-PE, -PP, -PM, -PR, -PU, -PS, -PA, -PO), plus -sn and -Pn as modifiers.
-- Port scan flags: -sT, -sS, -sX, -sF, -sN, -sM, -sA, -sW, -sI, -sU, -sY, -sZ, -6 (13 named scan-related flags).
-- OS TTL defaults: Linux/FreeBSD 64; Windows 128; Cisco/Solaris/OpenBSD/AIX 255.
-- Evasion techniques beyond IDS and firewall: 10 (fragmentation, source routing, source port manipulation, IP decoy, IP spoofing, MAC spoofing, custom packets, randomize host order/bad checksums counted together or separately per source, proxy servers, anonymizers).
-- Port scanning countermeasures: 8 items (section 3.19).
-- IP spoofing countermeasures: 6 items (section 3.20).
-- Well-known ports seen: 21, 80, 135, 139, 445, 3389 (plus 53, 161, 1900 in added context).
+The six TCP flags: URG, ACK, PSH, RST, SYN, FIN.
 
-### 8.3 "Pick the BEST option" Rules for This Module
+The ten evasion techniques (slide 25):
 
-1. If a question stresses "does not complete the handshake", the answer is the SYN (half-open) scan, not the connect scan.
-2. If a question stresses "cannot tell open from closed, only filtered from unfiltered", the answer is the ACK scan.
-3. If a question stresses "fails against Windows", the answer is one of FIN, NULL, Xmas, or Maimon, because Windows answers RST to all of them.
-4. If a question stresses "hides the real scanner's IP from the target entirely while still getting a usable result", the answer is the idle scan (decoys only add noise; spoofing alone sacrifices the reply).
-5. If a question stresses "a reply came back that should not have, from a broken packet", the answer points to a firewall or IDS answering on the target's behalf (bad checksum test).
-6. If a question stresses "best first step to confirm an open port is actually vulnerable", the answer is service version detection (-sV), not just the open/closed state.
-7. For countermeasure questions, favor the option that fixes the root trust assumption (do not trust by source port, IP, or MAC alone) over an option that only reacts after the fact.
+1. Packet fragmentation
+2. Source routing
+3. Source port manipulation
+4. IP address decoy
+5. IP address spoofing
+6. MAC address spoofing
+7. Creating custom packets
+8. Randomizing host order and sending bad checksums
+9. Proxy servers
+10. Anonymizers
+
+The four objectives of scanning: live hosts and open ports, OS and architecture, services, vulnerabilities.
+
+The six host discovery families: ICMP ping, ARP ping, UDP ping, TCP ping (SYN and ACK), IP protocol ping, plus the ping sweep.
+
+The six IP spoofing countermeasures: encrypt traffic (IPsec, TLS, SSH, HTTPS), multiple firewalls, no IP-based authentication, random initial sequence number, ingress filtering, egress filtering.
+
+The eight port scanning countermeasures: firewall and IDS rules, test your own firewall with scanners, no bypass by source port or source routing, update firmware, custom rule set, filter ICMP (inbound and outbound type 3), TCP/UDP/ICMP self-scan, anti-scanning and anti-spoofing rules.
+
+Ping sweep tools: Angry IP Scanner, SolarWinds Engineer's Toolset, NetScanTools Pro, Colasoft Ping Tool, Advanced IP Scanner, OpUtils.
+
+### 8.3 Numbers and Defaults
+
+| Item | Value |
+| --- | --- |
+| Nmap default ports scanned | Top 1000 TCP ports |
+| Sum in a default result | Not shown count + listed ports = 1000 |
+| Well-known port range | 0 to 1023 |
+| Windows TTL | 128 |
+| Linux and FreeBSD TTL | 64 |
+| Cisco, Solaris, AIX, OpenBSD TTL | 255 |
+| Linux window size (slide) | 5840 |
+| Cisco router window size (slide) | 4128 |
+| -f fragment size | 8 bytes (16 with -f -f) |
+| --mtu rule | Multiple of 8 |
+| ICMP echo request type | 8 |
+| ICMP timestamp, mask request | 13 and 17 |
+| Idle scan IPID change | +2 open, +1 closed |
+| SSDP | UDP 1900 |
+| TCP handshake steps | 3 (SYN, SYN/ACK, ACK) |
+| TCP termination steps | 4 (FIN, ACK, FIN, ACK) |
+| SCTP handshake steps | 4 (INIT, INIT-ACK, COOKIE ECHO, COOKIE ACK) |
+
+### 8.4 Pick-the-BEST-option Rules
+
+1. If two scans both fit, choose the one that matches the exact detail in the question (for example "no root rights" -> connect scan, not SYN).
+2. "Best way to find live hosts on the same subnet when ICMP is blocked" -> ARP ping (-PR).
+3. "Best way to find live hosts when ICMP echo is blocked but other ICMP may pass" -> timestamp or address mask ping.
+4. "Best way to see what a firewall allows" -> ACK scan.
+5. "Best way to scan without revealing your IP" -> idle scan (zombie), then proxy chains or Tor.
+6. "Best way to hide among many scanners in the logs" -> decoy scan.
+7. "Best way to avoid a simple packet filter" -> fragmentation, or FIN, NULL, Xmas against Unix hosts.
+8. "Best way to scan a Windows host for open ports" -> SYN or connect scan, not Xmas, FIN, or NULL.
+9. "Best way to know which software version runs" -> -sV (not -O).
+10. "Best way to identify the OS without sending packets" -> passive: sniff and read TTL and window, or read error messages.
+11. "Best defense against spoofed internal addresses from outside" -> ingress filtering.
+12. "Best defense against your network being used as a spoofing source" -> egress filtering.
+13. "Best first step before a port scan" -> host discovery. "Best first step after open ports are found" -> service version and OS detection, then enumeration.
+14. "Best way to test whether your own firewall detects scans" -> run scanning tools against your own hosts.
+15. If an answer says a scan is "undetectable", it is wrong. Stealth means lower visibility, not invisibility.
+
+### 8.5 Last-minute Traps
+
+- -sn is not stealth. -sS is not invisible.
+- A RST reply to a ping probe still means the host is up.
+- Silence means different things: filtered in SYN scans, open|filtered in FIN, NULL, Xmas, and UDP scans.
+- ACK scan results: RST means unfiltered, not open.
+- IP spoofing cannot complete a handshake from the attacker's machine.
+- A reply to a bad checksum probe came from a firewall or IDS, not the host.
+- The slide shows -ttl and -sA -sW. Real Nmap uses --ttl and -sW.
+- Capital -D is decoy. Lowercase -d is debug.
 
 ## 9. Practice Questions
 
-These are original practice questions written for this guide. They are not real exam questions.
+These are original practice questions written for this guide. They are not real exam questions. Each question is followed right away by its answer and explanation, as requested, instead of a separate answer key at the end.
 
-**Q1.** During a TCP three-way handshake, a client sends a SYN packet with sequence number 500. What acknowledgement number will the server place in its SYN+ACK reply?
+**Q1.** A tester runs a scan and sees that the scan never completes a TCP three-way handshake. Each open port answers with SYN/ACK, and the scanner immediately replies with RST. Which scan is this?
 
-- A. 500
-- B. 501
-- C. 0
-- D. 1000
+A. TCP connect scan
+B. Half-open (SYN) scan
+C. ACK scan
+D. Idle scan
 
-**Answer: B.** The acknowledgement number equals the received sequence number plus 1, so the server acknowledges 501.
+**Answer: B.** The half-open (SYN) scan sends SYN, receives SYN/ACK, and replies RST instead of ACK, so the handshake is never finished. A is wrong because connect scan finishes the handshake with ACK. C is wrong because ACK scan sends only ACK packets, with no prior SYN. D is wrong because idle scan uses a zombie host and never shows the attacker's SYN to the target directly.
 
-- A is wrong: that would mean the server did not actually acknowledge receipt of the byte.
-- C is wrong: 0 would only make sense before any sequence number was exchanged.
-- D is wrong: there is no rule that doubles the sequence number.
+**Q2.** Which Nmap switch sends a probe with the FIN, PSH, and URG flags all set?
 
-**Q2.** Which TCP flag tells the receiver to process the data in the packet immediately, rather than waiting in a buffer?
+A. -sN
+B. -sF
+C. -sX
+D. -sM
 
-- A. PSH
-- B. URG
-- C. ACK
-- D. SYN
+**Answer: C.** -sX is the Xmas scan, named because the packet is "lit up" with three flags: FIN, PSH, URG. A is wrong because -sN (NULL) sets no flags. B is wrong because -sF (FIN) sets only FIN. D is wrong because -sM (Maimon) sets FIN and ACK, not PSH and URG.
 
-**Answer: B.** URG marks data that should be treated as urgent and processed right away. (PSH tells the stack to flush buffered data to the application immediately, a related but distinct meaning: PSH is about delivery timing, URG is about priority within the stream.)
+**Q3.** A tester scans a Windows Server 2019 host with nmap -sN. Every port in the result shows as closed, even though the admin confirms port 3389 is open. What is the most likely explanation?
 
-- A is close but describes pushing buffered data out, not marking data as urgent.
-- C is wrong: ACK only confirms receipt.
-- D is wrong: SYN starts a connection.
+A. The firewall is blocking all inbound traffic
+B. Windows replies with RST to a NULL probe regardless of port state
+C. The tester forgot to use sudo
+D. Port 3389 was patched and is no longer listening
 
-**Q3.** An administrator notices that ICMP echo requests are blocked at the firewall, but a security tool still manages to discover live hosts using ICMP by asking for the current time from each host. Which Nmap option is this?
+**Answer: B.** Windows does not follow the RFC 793 behavior that FIN, NULL, and Xmas scans rely on. It answers RST for every probe, so every port looks closed. A is wrong because a fully blocking firewall would show filtered, not closed, and other scans (SYN) confirmed the port is open. C would usually cause an error or a silent failure, not a consistent "closed" result on a working raw scan. D contradicts the admin's confirmation.
 
-- A. -PE
-- B. -PP
-- C. -PR
-- D. -PO
+**Q4.** Which Nmap option is most useful for mapping which ports a stateful firewall allows through, without confirming whether the service behind them is open?
 
-**Answer: B.** -PP sends an ICMP timestamp request, asking for the current time; a reply (ICMP type 14) proves the host is alive even when echo is blocked.
+A. -sS
+B. -sA
+C. -sV
+D. -sU
 
-- A is wrong: -PE is the blocked echo request.
-- C is wrong: -PR is an ARP ping, not ICMP.
-- D is wrong: -PO sends IP protocol pings, not a timestamp query.
+**Answer: B.** The ACK scan (-sA) tells you unfiltered (the firewall let the ACK through, host replied RST) versus filtered (no reply). It cannot say a port is open. A finds open TCP ports directly, which is a different goal. C detects the service version on already-open ports. D scans UDP ports, a different protocol.
 
-**Q4.** Which Nmap host discovery flag tells Nmap to skip port scanning entirely and only report which hosts are alive?
+**Q5.** An attacker wants to scan a target without the target ever seeing the attacker's real IP address, by bouncing probes off an idle third-party host. Which technique is this?
 
-- A. -Pn
-- B. -sn
-- C. -sS
-- D. -O
+A. Decoy scan
+B. Idle (IPID) scan
+C. Source routing
+D. Proxy chaining
 
-**Answer: B.** -sn runs only the ping/discovery phase and stops before scanning any ports.
+**Answer: B.** The idle scan uses a "zombie" host with a predictable IP ID. The attacker's SYN to the target is spoofed as coming from the zombie, and the attacker reads the zombie's IPID changes to learn the result. The target's logs show only the zombie. A is wrong because in a decoy scan the attacker's real IP is still among the scanning addresses. C changes the packet's path, not who appears to send it. D hides the source but usually only supports TCP connect scans through application-level proxies, not the specific IPID side-channel technique described.
 
-- A is wrong: -Pn does the opposite, it skips discovery and scans ports anyway.
-- C is wrong: -sS is a port scan type.
-- D is wrong: -O is OS detection.
+**Q6.** During a UDP scan, a tester sees an ICMP message with type 3, code 3 returned for port 69. What does this tell the tester?
 
-**Q5.** A scanner sends a TCP packet with only the FIN flag set to a Linux target. The port does not respond at all. According to the FIN scan's logic, what does this mean?
+A. Port 69 is open
+B. Port 69 is closed
+C. Port 69 is filtered by a firewall
+D. The host does not support UDP
 
-- A. The port is closed
-- B. The port is open or filtered
-- C. The port does not exist
-- D. The host is down
+**Answer: B.** ICMP type 3 code 3 means "destination unreachable, port unreachable", which a host sends when a UDP packet arrives at a closed port. A is wrong because an open UDP port usually gives no ICMP error (it may give a protocol reply or stay silent). C is wrong because a firewall that blocks the probe typically causes silence or a different ICMP code (such as code 13, administratively prohibited), not code 3. D is incorrect; the host clearly processed the UDP packet enough to generate the ICMP response.
 
-**Answer: B.** For FIN, NULL, Xmas, and Maimon scans, silence means the port is open or filtered; only a RST reply would mean closed.
+**Q7.** Which of the following is the correct Nmap switch for the SCTP COOKIE ECHO scan?
 
-- A is wrong: closed ports answer with RST in this scan type.
-- C is wrong: ports always "exist" as numbers; the question is whether something listens on it.
-- D is wrong: the host clearly processed the probe (or a firewall near it did); this alone does not prove it is down.
+A. -sY
+B. -sZ
+C. -sO
+D. -sC
 
-**Q6.** The same FIN scan from Q5 is run against a Windows Server target instead, and every single port shows closed. What is the most likely explanation?
+**Answer: B.** -sZ sends an SCTP COOKIE ECHO chunk directly, skipping the earlier handshake steps, and reads ABORT (closed) versus silence (open or filtered). A is the SCTP INIT scan, a different SCTP technique. C and D are not real Nmap scan-type switches.
 
-- A. The firewall is extremely well configured
-- B. Windows replies with RST to this probe regardless of the real port state
-- C. The FIN scan always fails on any OS
-- D. The target has no open ports at all
+**Q8.** A packet capture shows a reply packet with TTL = 118 and a TCP window size of 65535. What operating system is most likely running on the source of that packet?
 
-**Answer: B.** Microsoft Windows, along with many Cisco devices, BSDI, and IBM OS/400, violates the RFC 793 expectation and sends RST for FIN/NULL/Xmas probes on every port, open or closed, which makes this scan type unreliable on those systems.
+A. Linux
+B. Windows
+C. Cisco router
+D. Solaris
 
-- A is wrong: this is a known OS behavior difference, not evidence of firewall quality.
-- C is wrong: the scan does work, imperfectly, on many Unix-based systems.
-- D is an unsupported guess; the real cause is the known OS-specific RST behavior.
+**Answer: B.** A TTL of 118 is just under the standard starting value of 128, which matches Windows after crossing about 10 routers. The window size (65535) also fits the Windows range on the slide's table (65,535 bytes up to 1 gigabyte). A is wrong because Linux starts at TTL 64 with a window around 5840. C and D both start at TTL 255, far from 118 even after many hops.
 
-**Q7.** Which scan type is specifically designed to determine whether firewall rules are stateful, and by itself can never report a port as "open"?
+**Q9.** Which technique evades a firewall by splitting the TCP header of a probe packet across several tiny IP packets?
 
-- A. SYN scan
-- B. ACK scan
-- C. UDP scan
-- D. Idle scan
+A. Source routing
+B. Packet fragmentation
+C. IP address decoy
+D. MAC address spoofing
 
-**Answer: B.** The ACK scan's probe has only the ACK flag; both open and closed ports answer RST, so the scan can only report "unfiltered" or "filtered", never "open".
+**Answer: B.** Packet fragmentation (Nmap -f) splits the TCP header into pieces of 8 bytes or less so a simple packet filter cannot read the whole header to apply its rule. A redirects the path the packet takes, not its structure. C adds fake scanning sources, it does not split packets. D changes the Layer 2 hardware address, unrelated to fragment size.
 
-- A is wrong: SYN scan directly reports open ports via SYN/ACK replies.
-- C is wrong: UDP scan can report open directly if a UDP reply comes back.
-- D is wrong: idle scan, through the zombie's IP ID behavior, does distinguish open from closed/filtered.
+**Q10.** An attacker runs nmap -g 53 -sS 10.10.1.11 against a target protected by a simple firewall that trusts replies from DNS servers. What is the attacker exploiting?
 
-**Q8.** An attacker wants to scan a target without the target's logs ever showing the attacker's own IP address, while still being able to determine which ports are open. Which technique BEST fits this goal?
+A. The firewall does not inspect ICMP traffic
+B. The firewall allows traffic that appears to originate from a well-known source port
+C. The target's TCP stack has a weak initial sequence number
+D. The target allows source-routed packets
 
-- A. IP address decoy
-- B. Idle scan using a zombie host
-- C. Randomizing host order
-- D. Sending bad checksums
+**Answer: B.** -g (or --source-port) sets the source port of the probe to 53, the well-known DNS port, so the firewall's rule that trusts "replies from DNS" lets the scan through. A is unrelated to this scenario. C concerns spoofing and session prediction, not port-based trust. D concerns a different evasion technique (source routing), not source port manipulation.
 
-**Answer: B.** The idle scan spoofs every probe as coming from the zombie, and the attacker reads the result indirectly through the zombie's IP ID counter, so the target never logs the attacker's real address while a usable result is still obtained.
+**Q11.** Which pair correctly matches the probe type to the host discovery switch?
 
-- A is wrong: a decoy scan still includes the real scanner's own IP among the decoys; it only adds noise, it does not fully hide it.
-- C is wrong: randomizing order changes the sequence of hosts scanned, not whether the attacker's IP appears.
-- D is wrong: bad checksums test firewall/IDS behavior, unrelated to hiding the scanner's identity.
+A. -PE : ARP request
+B. -PR : ICMP echo request
+C. -PU : UDP probe
+D. -PS : IP protocol probe
 
-**Q9.** A tester captures a reply packet from a target with TTL 64 and a TCP window size of 65535. According to the module's reference table, which operating system is the BEST match?
+**Answer: C.** -PU sends a UDP probe, typically to a port that is probably closed, to trigger an ICMP port-unreachable reply. A is wrong because -PE is the ICMP echo probe, not ARP. B is wrong because -PR is ARP, not ICMP echo. D is wrong because -PS is a TCP SYN probe, not an IP protocol probe (which is -PO).
 
-- A. Linux
-- B. FreeBSD
-- C. Windows
-- D. Cisco Router
+**Q12.** During a scan, a tester sees the result line "Not shown: 1000 filtered tcp ports (no-response)" and no replies at all, even on ports known to be open. The tester had used nmap --badsum on the target. What does this result suggest?
 
-**Answer: B.** TTL 64 fits both Linux and FreeBSD, but the window size of 65535 specifically matches FreeBSD; Linux's default in the table is 5840.
+A. The target host is down
+B. No firewall or IDS is present to reply on behalf of the host, and the real host correctly dropped every bad-checksum packet
+C. The target has blocked all incoming traffic with egress filtering
+D. The scan should be re-run with -Pn
 
-- A is wrong: Linux's listed default window size is 5840, not 65535.
-- C is wrong: Windows uses TTL 128, not 64.
-- D is wrong: Cisco routers use TTL 255.
+**Answer: B.** A --badsum scan sends invalid checksums; real hosts drop them silently. If no device replies at all, there is no firewall or IDS present that fails to verify checksums. A is unlikely since other scans (not shown here) found the host up. C confuses egress filtering (which controls outbound traffic from a network) with what is being tested here (inbound evasion). D would not change this result, since the host already responds to other probes; -Pn only skips the ping stage.
 
-**Q10.** Which of the following is an example of PASSIVE banner grabbing, as described in this module?
+**Q13.** Which of the following best explains why an attacker cannot complete a normal TCP connection when spoofing the source IP address with Hping3's -a option?
 
-- A. Sending a series of specially crafted packets and comparing the responses to a fingerprint database
-- B. Reading the server name printed in a web application's error page
-- C. Running Nmap's -O active OS detection
-- D. Sending a TCP SYN probe and reading the SYN/ACK flags
+A. Hping3 does not support raw sockets
+B. The target's reply (SYN/ACK) is sent to the spoofed address, not to the attacker
+C. Spoofed packets are always dropped by the sender's own router
+D. The -a option disables the TCP flags
 
-**Answer: B.** Reading information that a target reveals on its own, such as in an error message, without sending any special crafted probe, is passive banner grabbing.
+**Answer: B.** Any reply from the victim goes to whatever source address was in the original packet. Since that address is spoofed, the real attacker never receives the SYN/ACK needed to complete the handshake. A is false; Hping3 relies on raw sockets to craft such packets. C is not a general rule; many networks do not filter outbound spoofed packets. D is unrelated; -a only changes the source address field.
 
-- A is wrong: this describes active banner grabbing.
-- C is wrong: -O is an active fingerprinting technique.
-- D is wrong: this is a normal scan probe, not a banner-grabbing technique at all.
+**Q14.** A company wants to stop attackers from sending packets into its network that falsely claim to originate from an internal IP address. Which control addresses this directly?
 
-**Q11.** Which URL file extension, mentioned specifically in this module, suggests that a web application is running on Microsoft IIS and a Windows platform?
+A. Egress filtering
+B. Ingress filtering
+C. Random initial sequence numbers
+D. Service version hiding
 
-- A. .php
-- B. .jsp
-- C. .aspx
-- D. .cfm
+**Answer: B.** Ingress filtering inspects traffic entering the network and drops packets whose source address falsely claims to be from inside. A instead controls traffic leaving the network to stop internally spoofed packets from reaching the internet. C protects against sequence-number prediction in session hijacking, not spoofed arriving packets. D is a banner-grabbing countermeasure, unrelated to spoofing.
 
-**Answer: C.** The module names .aspx => IIS server and Windows platform as its specific example of banner grabbing from page extensions.
+**Q15.** Which best next step should a tester take after an Nmap scan returns six open ports on a Windows host, before moving to exploitation?
 
-- A is wrong: .php commonly suggests Apache or Nginx, on Linux or Windows, but is not the example given.
-- B is wrong: .jsp suggests a Java application server such as Tomcat.
-- D is wrong: .cfm suggests Adobe ColdFusion.
+A. Immediately attempt to exploit port 445 with a known exploit
+B. Run service version detection (-sV) and OS detection to confirm exact software versions before selecting an exploit
+C. Rerun the same scan with --badsum to double check
+D. Move directly to the reporting phase
 
-**Q12.** A scan of a firewall-protected network returns all ports filtered with a plain SYN scan. The tester then runs the scan again, splitting each probe into several small IP fragments. Several ports now show open. What technique did the tester use?
+**Answer: B.** CEH methodology calls for version and OS discovery before exploitation, so the exploit chosen actually matches the confirmed software version; attacking blindly risks failure or unintended damage. A skips a necessary verification step. C would not add exploit-relevant information; --badsum is for firewall detection, not confirming services. D skips scanning, enumeration, and vulnerability analysis phases entirely.
 
-- A. Source routing
-- B. IP address decoy
-- C. Packet fragmentation
-- D. MAC address spoofing
+**Q16.** Which scanning technique is specifically designed to make the IDS or firewall see many different IP addresses scanning the target at once, including the attacker's real address among them?
 
-**Answer: C.** Splitting a probe packet into several smaller IP fragments so a simple filter cannot see the complete header is the definition of packet fragmentation.
+A. IP address decoy
+B. Idle scan
+C. Egress filtering
+D. Source routing
 
-- A is wrong: source routing changes the path a packet takes through routers, not its fragmentation.
-- B is wrong: IP address decoy adds fake source addresses; it does not split the packet.
-- D is wrong: MAC address spoofing changes the hardware address field, not the packet's fragmentation.
+**Answer: A.** The decoy technique (-D) mixes the attacker's real probes with probes forged from several decoy addresses, so the logs show many apparent scanners. B is wrong because in the idle scan the attacker's real address never reaches the target at all. C is a defensive control, not an attack technique. D changes the path a packet takes, not how many apparent sources appear.
 
-**Q13.** A firewall is configured to allow any traffic that appears to originate from port 53, assuming it must be legitimate DNS traffic. Which Nmap option lets an attacker exploit this specific misconfiguration during a scan?
+**Q17.** A tester captures a TCP SYN/ACK packet from an unknown host with Wireshark and sees TTL = 255 and window size = 4128. Which device type does this best match, based on the module's OS table?
 
-- A. --badsum
-- B. -g 53 (or --source-port 53)
-- C. -D RND:10
-- D. --spoof-mac
+A. A Linux web server
+B. A Windows desktop
+C. A Cisco router
+D. A FreeBSD firewall
 
-**Answer: B.** -g (or --source-port) forces Nmap to use a chosen source port, here 53, to match the firewall's trusted-port rule.
+**Answer: C.** The notes list Cisco routers with TTL 255 and window size 4128, an exact match. A would show TTL 64 and a different window. B would show TTL 128. D would show TTL 64 and window 65535.
 
-- A is wrong: --badsum sends invalid checksums, unrelated to the source port.
-- C is wrong: -D adds decoy source IP addresses, not a fixed source port.
-- D is wrong: --spoof-mac changes the hardware address, not the TCP source port.
+**Q18.** Which statement about the TCP Connect scan (-sT) is correct?
 
-**Q14.** Which statement correctly explains why an attacker generally cannot read the direct reply to a scan after spoofing the source IP address with Hping3's -a option?
+A. It requires raw socket access and administrator or root privileges
+B. It completes the full three-way handshake using the operating system's own connect() call
+C. It is stealthier than the SYN scan because it uses fewer packets
+D. It works identically whether or not --spoof-mac is specified
 
-- A. Hping3 automatically discards all replies when -a is used
-- B. The target's reply is sent to the spoofed address, not to the attacker's real address
-- C. Spoofed packets are always dropped by the target before any reply is generated
-- D. The -a option disables all TCP flags in the outgoing packet
+**Answer: B.** -sT uses the OS's normal connect() function, which performs the full handshake, so it needs no special privileges. A is the opposite of the truth; -sT specifically avoids the need for raw sockets. C is false; -sT is generally noisier and more easily logged than -sS, not stealthier. D is false, which is demonstrated directly in the module notes: Nmap explicitly states that --spoof-mac is not honored for TCP Connect scans.
 
-**Answer: B.** Because the packet's source address field says the spoofed IP, the target routes its reply back to that spoofed address rather than to the attacker's real location, so the attacker normally never sees it directly.
+**Q19.** Which of the following AI-related statements about this module's scanning concepts is most accurate?
 
-- A is wrong: Hping3 does not discard replies on purpose; it simply never receives the real one at its own interface.
-- C is wrong: the target generally does process the spoofed packet and does reply, just not to the sender's real address.
-- D is wrong: -a only changes the source address field, not the TCP flags chosen with other options.
+A. An AI assistant can guarantee a scan will not be detected by any IDS
+B. An AI assistant can help translate a plain-English scanning goal into the correct Nmap syntax, but the resulting command must still be verified before running it
+C. AI tools replace the need to understand Nmap flags
+D. ShellGPT automatically obtains authorization to scan a target
 
-**Q15.** A tester runs the command below and sees a warning that the requested option "will not be honored for TCP Connect scan." What is the most likely cause?
+**Answer: B.** This matches how the course presents AI tools such as ShellGPT: they generate commands from natural language, but the operator still reviews ([D]escribe) or confirms ([E]xecute) before running them. A overstates what AI can promise about detection. C is false; understanding the flags is still required to catch AI mistakes. D is false; authorization is a human and legal responsibility, never granted by a tool.
 
-```bash
-sudo nmap -sT -Pn --spoof-mac Dell 10.10.1.11
-```
+**Q20.** A tester wants to discover live hosts on the same physical LAN as her laptop, even though the hosts have host-based firewalls blocking ICMP and TCP probes. Which host discovery method is most likely to succeed?
 
-- A. -Pn is incompatible with --spoof-mac
-- B. --spoof-mac requires a raw-packet scan type, and -sT uses the OS's own socket interface instead
-- C. The vendor name "Dell" is not a valid value for --spoof-mac
-- D. 10.10.1.11 is not a valid IPv4 address
+A. -PE
+B. -PP
+C. -PR
+D. -PU
 
-**Answer: B.** MAC address spoofing needs Nmap to build raw Ethernet frames itself; -sT (TCP connect scan) instead relies on the operating system's normal connect() call, which does not let Nmap set a custom MAC address, producing exactly this warning.
+**Answer: C.** ARP ping (-PR) works at Layer 2 and does not depend on the ICMP or TCP stack being reachable; a host must answer ARP to use the network at all, so it is the most reliable method on a local LAN even when upper-layer probes are blocked. A, B, and D all depend on ICMP or UDP getting through, which the scenario says is blocked.
 
-- A is wrong: -Pn (skip host discovery) has no bearing on this specific conflict.
-- C is wrong: "Dell" is a perfectly valid vendor name that Nmap can match to an OUI.
-- D is wrong: 10.10.1.11 is a valid IPv4 address and is not the source of the warning.
+**Q21.** Which of the following correctly completes the Nmap decoy command to generate ten random decoy addresses alongside a real scan?
 
-**Q16.** Which of the following BEST distinguishes IP address decoy scanning from IP address spoofing, as described in this module?
+A. nmap -D decoy:10 TARGET
+B. nmap -D RND:10 TARGET
+C. nmap --decoy 10 TARGET
+D. nmap -10D TARGET
 
-- A. Decoy scanning never works against Windows targets, while spoofing always does
-- B. Decoy scanning hides the real scanner's IP among several fake ones while still letting the attacker read a usable result; spoofing replaces the real source entirely and generally prevents the attacker from seeing the reply
-- C. Decoy scanning only affects UDP scans, while spoofing only affects TCP scans
-- D. They are two names for exactly the same technique
+**Answer: B.** The correct syntax uses RND:N to generate N random decoy addresses, exactly as shown in the module notes (nmap -D RND:10 [target]). A, C, and D are not valid Nmap syntax.
 
-**Answer: B.** This is the key practical difference highlighted in sections 3.11 and 3.16: a decoy scan keeps the real scanning IP in the mix of apparent sources, so the attacker still gets the actual scan result, while a fully spoofed single source address means the reply goes elsewhere.
+**Q22.** A scan of a target shows port 80 as "unfiltered" using an ACK scan, but a separate SYN scan shows port 80 as "closed." What is the most reasonable combined conclusion?
 
-- A, C, and D all misstate the relationship; neither technique is limited to one OS or one transport protocol, and they are distinct techniques with different trade-offs.
+A. The firewall allows ACK packets to reach the host, and the host itself has no service listening on port 80
+B. Port 80 is definitely open and the SYN scan result is wrong
+C. The target does not exist
+D. The ACK scan result is invalid because UDP must be used instead
 
-**Q17.** A tester runs an Nmap scan with --badsum against a target known to have several open ports, and every single port comes back "filtered (no-response)". What is the correct interpretation?
+**Answer: A.** "Unfiltered" from the ACK scan means the packet reached the host and it replied, ruling out a blocking firewall; "closed" from the SYN scan means no service answers connection attempts on that port. Together, this means the port is reachable but nothing is listening. B incorrectly dismisses a valid, more specific result. C is contradicted by both scans returning results. D confuses protocols; ACK and SYN scans are both TCP techniques.
 
-- A. The target has no open ports
-- B. The target's TCP/IP stack is behaving correctly by dropping packets with invalid checksums
-- C. --badsum always reports open ports accurately regardless of checksum validity
-- D. The firewall has crashed
+**Q23.** Which combination of flags is sent by the Maimon scan?
 
-**Answer: B.** A properly implemented TCP/IP stack validates the checksum and silently drops a packet with an invalid one, so "filtered (no-response)" for every port is the expected, correct behavior, not evidence of a flaw.
+A. SYN only
+B. FIN and ACK
+C. FIN, PSH, and URG
+D. No flags at all
 
-- A is wrong: the module's own screenshot shows this exact host has several genuinely open ports under a normal scan.
-- C is wrong: --badsum specifically relies on an invalid, broken packet, so it cannot reliably show "open".
-- D is an unsupported leap; nothing here indicates a crash.
+**Answer: B.** The Maimon scan (-sM) sets FIN and ACK together. A describes a normal connection start, not Maimon. C describes the Xmas scan. D describes the NULL scan.
 
-**Q18.** Which countermeasure from this module's Port Scanning Countermeasures list specifically targets the technique of using a trusted source port or a specified source route to bypass filtering?
+**Q24.** An organization wants to stop its own network from being used to launch IP-spoofed attacks against other networks. Which control should it implement at its network edge?
 
-- A. "Use a custom rule set to lock down the network and block unwanted ports at the firewall"
-- B. "Ensure that the mechanisms used for routing and filtering at the routers and firewalls, respectively, cannot be bypassed using a particular source port or source routing methods"
-- C. "Filter all ICMP messages at the firewalls and routers"
-- D. "Ensure that the router, IDS, and firewall firmware are updated to their latest releases and versions"
+A. Ingress filtering only
+B. Egress filtering
+C. Random initial sequence numbers only
+D. Service version hiding
 
-**Answer: B.** This is the countermeasure that directly names both source port and source routing bypass methods.
+**Answer: B.** Egress filtering blocks outbound packets whose source address is not within the organization's own assigned range, preventing spoofed traffic from leaving the network and being used against others. A protects the organization's own network from incoming spoofed traffic, which is a different direction of the same problem. C defends against session hijacking, not outbound spoofing. D is unrelated to spoofing.
 
-- A, C, and D are all real countermeasures from the same list, but none specifically names source port or source routing bypass.
+**Q25.** Which tool from the module is specifically described as letting an attacker build and edit raw packets field by field, including a hex editor and a decode editor, to scan beyond a firewall?
 
-**Q19.** Which IP spoofing countermeasure specifically stops a network from being used to launch spoofed attacks against other networks?
+A. Angry IP Scanner
+B. Colasoft Packet Builder
+C. Wireshark
+D. OpUtils
 
-- A. Ingress filtering
-- B. Egress filtering
-- C. Random initial sequence number
-- D. Multiple firewalls
+**Answer: B.** Colasoft Packet Builder is the packet crafting tool named in the module with a decode editor and hex editor for building custom TCP packets. A and D are host discovery or management tools, not packet builders. C captures and reads packets; it does not create and send custom ones.
 
-**Answer: B.** Egress filtering drops outgoing packets whose source address is not actually part of your own address space, preventing your network from sending forged-source traffic out toward the internet.
+**Q26.** A tester runs nmap -sU -p 161 10.10.1.30 and receives no response at all after several retries. What is the most accurate conclusion Nmap will report?
 
-- A is wrong: ingress filtering protects your own network from incoming spoofed traffic, not the reverse.
-- C is wrong: a random ISN defends against blind TCP handshake spoofing, not against your network launching spoofed traffic outward.
-- D is wrong: multiple firewalls add depth of protection generally, but are not specifically an anti-spoofing-outbound control.
+A. Port 161 is definitely closed
+B. Port 161 is open
+C. Port 161 is reported as open or filtered, because UDP gives no reply for either open ports or firewall-blocked ports
+D. Port 161 does not exist in the UDP protocol
 
-**Q20.** An attacker wants to scan a Domain Name System (DNS) server and a Simple Network Management Protocol (SNMP) agent, both of which run over UDP. Which Nmap scan flag MUST be used to properly test these services?
+**Answer: C.** Nmap cannot distinguish an open UDP port (which often does not reply unless given a protocol-specific request) from a filtered one (where the firewall silently drops the packet), so it reports "open|filtered". A and B overstate certainty the scan cannot provide. D is incorrect; port 161 is the standard SNMP port over UDP.
 
-- A. -sS
-- B. -sU
-- C. -sT
-- D. -sA
+**Q27.** Which statement correctly distinguishes source routing from source port manipulation?
 
-**Answer: B.** DNS (port 53) and SNMP (port 161) commonly run over UDP, so a UDP scan (-sU) is required; a TCP-only scan type would miss them.
+A. Source routing changes the destination port; source port manipulation changes the path a packet takes
+B. Source routing lets the sender specify some or all of the path a packet takes through the network; source port manipulation changes the originating port number to one a firewall trusts
+C. They are two names for the same technique
+D. Source routing only works over UDP; source port manipulation only works over TCP
 
-- A, C, and D are all TCP-based scan types and will not properly probe UDP services.
+**Answer: B.** This is the precise distinction given in the module: source routing controls the route (which routers the packet passes through), while source port manipulation controls the port number the packet appears to come from. A reverses the definitions. C is false, they target different firewall weaknesses. D is an invented restriction not supported by the notes.
 
-**Q21.** In an idle (zombie) scan, the attacker probes the zombie twice: once before and once after the spoofed probe to the real target. The zombie's IP ID rises by 2 between the two probes. What does this indicate about the target port?
+**Q28.** During OS fingerprinting, a tester notes a web application error footer reading "Apache/2.4.41 (Ubuntu) Server at example.com Port 80." Which category of banner grabbing does this represent?
 
-- A. The port is closed
-- B. The port is filtered
-- C. The port is open
-- D. The zombie is not usable for idle scanning
+A. Active banner grabbing, because packets were specially crafted
+B. Passive banner grabbing, because the information came from an error message without extra crafted probes
+C. This is not banner grabbing at all
+D. This is a form of IP spoofing
 
-**Answer: C.** A rise of 2 in the zombie's IP ID means the zombie sent one extra packet in between, because the target's SYN/ACK (sent only when the port is open) prompted the zombie to reply with an unsolicited RST, incrementing its counter a second time.
+**Answer: B.** Reading information from a normal error page (something the server shows on its own without a specially crafted probe) is passive banner grabbing, specifically "banner grabbing from error messages" as described in the module. A would require active, crafted packets sent for the explicit purpose of OS fingerprinting. C is incorrect, this is exactly a banner grabbing example. D is unrelated; nothing about source addresses is involved here.
 
-- A and B are wrong: a closed or filtered port causes the target to answer the zombie with RST (or nothing), which the idle zombie ignores, so the IP ID would rise by only 1 (or not change meaningfully for filtered).
-- D is wrong: a rise of exactly 2 is the expected, usable signal for an open port; it indicates the zombie is behaving predictably, which is exactly what makes it usable.
+**Q29.** Why would an attacker prefer the half-open (SYN) scan over the TCP connect scan when scanning a large network, apart from stealth?
 
-**Q22.** An attacker sends an SCTP COOKIE ECHO chunk to a port. No reply is received at all. According to this module's logic for this scan type, what does this mean?
+A. It is generally faster and requires fewer completed connections, since it never finishes the handshake
+B. It is the only scan type that works on UDP ports
+C. It works without needing raw socket privileges
+D. It always returns more accurate results than a connect scan
 
-- A. The port is closed
-- B. The port is open or filtered
-- C. The association was fully established
-- D. SCTP does not support this type of probe
+**Answer: A.** Because a SYN scan sends RST instead of completing the handshake, the kernel and the target do not need to manage a fully established connection for each probe, so in practice it is lighter and generally faster across many hosts and ports. B is false; both are TCP-only scans, UDP requires -sU. C is backwards; SYN scan needs raw sockets and elevated privileges, while connect scan does not. D is an overgeneralization; neither method is inherently more "accurate" in every situation, they simply behave differently against filtering devices.
 
-**Answer: B.** Like FIN, NULL, and Xmas scans on TCP, the SCTP COOKIE ECHO scan relies on silence meaning open or filtered; only an ABORT reply indicates closed.
+**Q30.** Which of the following is NOT one of the eight port scanning countermeasures listed in this module?
 
-- A is wrong: a closed SCTP port replies with ABORT, not silence.
-- C is wrong: a single COOKIE ECHO chunk with no further exchange does not complete an SCTP association.
-- D is wrong: SCTP does support this probe; it is exactly the scan type this question describes.
+A. Filter all ICMP messages at firewalls and routers, especially inbound types and outbound type 3 unreachable messages
+B. Keep router, IDS, and firewall firmware updated to the latest versions
+C. Allow all source-routed packets so legitimate diagnostic tools continue to work
+D. Ensure anti-scanning and anti-spoofing rules are properly configured
 
-**Q23.** Which network protocol, mentioned in this module as an evasion-adjacent discovery topic, runs over UDP port 1900 and is used by routers, cameras, and smart TVs to discover each other automatically?
-
-- A. SCTP
-- B. ARP
-- C. SSDP
-- D. ICMP
-
-**Answer: C.** SSDP (Simple Service Discovery Protocol), the discovery component of UPnP, uses UDP port 1900 for this purpose.
-
-- A is wrong: SCTP is an unrelated transport protocol used for telephony signalling.
-- B is wrong: ARP resolves IP addresses to MAC addresses on a local segment, unrelated to UPnP device discovery.
-- D is wrong: ICMP carries error and control messages, not UPnP device discovery traffic.
-
-**Q24.** A tester cannot find a pre-built Nmap scan type that matches a specific firewall bypass she has identified, so she opens Colasoft Packet Builder and manually edits the Ethernet, IP, and TCP fields of a single packet before sending it. Which technique is this?
-
-- A. Service version discovery
-- B. Creating custom packets
-- C. IP address decoy
-- D. Randomizing host order
-
-**Answer: B.** Building a packet field by field with a dedicated packet crafting tool, rather than relying on a scanner's built-in probe templates, is the definition of creating custom packets.
-
-- A is wrong: service version discovery (-sV) probes already-open ports for software version strings, unrelated to hand-building a packet.
-- C is wrong: IP address decoy adds fake source addresses to an otherwise normal scan.
-- D is wrong: randomizing host order changes the sequence in which hosts are scanned.
-
-**Q25.** A packet diagram shows a sender whose packet is blocked at a firewalled router on the direct path to the destination. The sender instead specifies an alternate path through several other routers to reach the same destination, bypassing the firewalled router entirely. Which technique does this describe?
-
-- A. Source routing
-- B. IP address spoofing
-- C. MAC address spoofing
-- D. Egress filtering
-
-**Answer: A.** Source routing lets the sender specify some or all of the route a packet takes, bypassing routers that would otherwise inspect or block it, exactly as shown in this diagram.
-
-- B is wrong: IP address spoofing changes the claimed sender address, not the path taken.
-- C is wrong: MAC address spoofing changes the hardware address, not the routing path.
-- D is wrong: egress filtering is a defensive countermeasure, not an attacker's evasion technique, and it concerns outbound address validation, not routing paths.
-
-**Q26.** An ethical hacker wants an AI assistant to help automate a routine scanning task from a plain-English description. Which of the following is the SAFEST way to use an AI-generated Nmap or Hping3 command in an authorized engagement?
-
-- A. Run any AI-generated command immediately without review, since AI tools are always accurate
-- B. Read and understand every flag in the generated command, confirm it matches the agreed scope, and then decide whether to run it
-- C. Only use AI-generated commands against targets outside the signed scope, to avoid liability
-- D. Never use AI tools for scanning tasks under any circumstances
-
-**Answer: B.** As with any tool output, an AI-generated command should be read and understood, and checked against the written scope of the engagement, before it is executed; this matches the "AI angle" guidance repeated throughout this module.
-
-- A is wrong: AI assistants can generate incorrect, outdated, or unsafe commands, including nonexistent flags.
-- C is wrong: this inverts the whole point of scope; targets outside the signed scope should never be touched, AI-generated command or not.
-- D is wrong: AI assistance can be a legitimate time-saver when used carefully; the module's AI angle sections describe exactly this kind of safe use.
-
-**Q27.** A tester pastes a short packet capture line into an LLM and asks it to identify the TCP flags and the likely OS of the responding host, based on TTL and window size. The LLM answers confidently with a specific OS and version. What is the MOST appropriate next step?
-
-- A. Immediately report the LLM's answer as a confirmed fact in the final report
-- B. Cross-check the LLM's TTL/window reasoning against the reference table in this module, and confirm with an independent method such as -sV or banner grabbing before relying on it
-- C. Ignore the LLM's answer entirely, since AI tools are never useful for this kind of task
-- D. Re-run the same prompt ten times and average the answers
-
-**Answer: B.** The module's AI angle notes throughout stress using AI output as a lead to verify, not as a substitute for the reference data and independent confirmation methods already covered (TTL/window table in 3.8, service and OS detection in 3.7 and 3.13).
-
-- A is wrong: a single unverified claim, from a human or an AI, should not become a reported fact without confirmation.
-- C is wrong: the module explicitly shows useful AI uses when the output is checked, not blanket dismissal.
-- D is wrong: averaging repeated guesses from the same model does not substitute for checking against real reference data or an independent scan.
-
-**Q28.** Which of the following BEST completes this sentence: "Service version detection (-sV) matters to an attacker mainly because..."
-
-- A. it makes the scan run faster than a plain port scan
-- B. it reveals the exact product and version behind an open port, which can be matched to known exploits
-- C. it automatically exploits any vulnerable service it finds
-- D. it replaces the need for host discovery
-
-**Answer: B.** The module states plainly that obtaining an accurate service version number allows attackers to determine the vulnerability of a target system to particular exploits.
-
-- A is wrong: version detection is slower than a plain port scan, not faster (46.55 seconds versus 1.65 seconds in the module's own example).
-- C is wrong: -sV only identifies versions; it does not exploit anything by itself.
-- D is wrong: version detection happens after host discovery and port scanning, not instead of them.
-
-**Q29.** A firewall administrator wants to confirm that her organization's perimeter correctly drops packets whose source address falsely claims to be from inside the organization's own network. Which specific control is she testing?
-
-- A. Egress filtering
-- B. Ingress filtering
-- C. Random initial sequence numbers
-- D. Multiple firewalls
-
-**Answer: B.** Ingress filtering specifically checks incoming traffic and drops packets that falsely claim an internal source address, which is exactly the scenario described.
-
-- A is wrong: egress filtering checks the opposite direction, outgoing traffic leaving the network.
-- C is wrong: random ISNs address blind TCP sequence-prediction spoofing, not address-origin checks at the perimeter.
-- D is wrong: multiple firewalls add general defense in depth, but this question describes one specific filtering control, not a layering strategy.
-
-**Q30.** Which statement correctly summarizes the relationship between TCP window scan (-sW) and TCP ACK scan (-sA)?
-
-- A. They are unrelated scan types that use completely different probe packets
-- B. The window scan sends the same type of ACK probe as the ACK scan, but additionally reads the TCP window field of the RST reply to sometimes distinguish open from closed ports
-- C. The window scan is only usable on UDP services
-- D. The ACK scan is always more accurate than the window scan
-
-**Answer: B.** Both scans send an ACK probe; the window scan adds the extra step of checking whether the RST reply's window field is positive (suggesting open) or zero (suggesting closed), a refinement the plain ACK scan does not attempt.
-
-- A is wrong: they use the exact same underlying ACK probe packet.
-- C is wrong: both are TCP scan types, not UDP.
-- D is wrong: accuracy depends on the target OS's implementation quirks; neither scan is universally more accurate than the other.
+**Answer: C.** The module's countermeasures explicitly call for ensuring that routing and filtering mechanisms "cannot be bypassed using a particular source port or source routing methods," which means source-routed packets should be restricted, not broadly allowed. A, B, and D are all directly listed among the eight countermeasures.
 
 ## 10. Flashcards
 
-Q: What is network scanning? | A: Procedures used for identifying hosts, ports, and services in a network; phase 2 of the five hacking phases.
-
+Q: What is network scanning? | A: Phase 2 of hacking. Identifies live hosts, open ports, services, OS, and vulnerabilities.
 Q: What are the six TCP flags? | A: URG, ACK, PSH, RST, SYN, FIN.
-
-Q: What does the SYN flag do? | A: Initiates a connection between hosts.
-
-Q: What does the FIN flag do? | A: Signals there will be no further transmissions, ending a connection politely.
-
-Q: What does RST do, compared to FIN? | A: RST abruptly resets/kills a connection at once; FIN ends it politely with further ACKs.
-
-Q: How many packets make up the three-way handshake? | A: Three: SYN, SYN+ACK, ACK.
-
-Q: How many packets make up TCP session termination? | A: Four: FIN, ACK, FIN, ACK.
-
-Q: Which Nmap flag does an ICMP echo ping? | A: -PE.
-
-Q: Which Nmap flag does an ARP ping? | A: -PR (most reliable on a local LAN).
-
-Q: Which Nmap flag does a UDP ping? | A: -PU.
-
-Q: Which Nmap flag does an IP protocol ping? | A: -PO.
-
-Q: What does -sn do? | A: Ping scan only; skips port scanning.
-
-Q: What does -Pn do? | A: Skips host discovery; treats every target as up.
-
-Q: Which scan type completes the full TCP handshake? | A: TCP connect scan, -sT.
-
-Q: Which scan type is "half-open" and needs root? | A: TCP SYN scan, -sS.
-
-Q: Which three flags make up an Xmas scan probe? | A: FIN, PSH, and URG.
-
-Q: What flags does a NULL scan send? | A: None at all.
-
-Q: What flags does a Maimon scan send? | A: FIN and ACK.
-
-Q: For FIN, NULL, Xmas, and Maimon scans, what does silence mean? | A: The port is open or filtered.
-
-Q: Which major OS breaks FIN/NULL/Xmas/Maimon scans by answering RST to everything? | A: Windows (also many Cisco devices, BSDI, IBM OS/400).
-
-Q: What can an ACK scan (-sA) never determine? | A: Whether a port is open; it only shows unfiltered or filtered.
-
-Q: What does the window scan (-sW) add beyond a plain ACK scan? | A: It reads the TCP window field of the RST reply to sometimes tell open from closed.
-
-Q: What is an idle (zombie) scan used for? | A: Hiding the real scanner's IP by using a third-party zombie host's IP ID counter to read scan results.
-
-Q: In an idle scan, what IP ID rise means the port is open? | A: A rise of 2.
-
-Q: What reply indicates a closed UDP port? | A: An ICMP port unreachable message (type 3, code 3).
-
-Q: What do SCTP INIT and COOKIE ECHO scans correspond to? | A: -sY (INIT, like SYN scan) and -sZ (COOKIE ECHO, like FIN/NULL scans).
-
-Q: What does -sV detect? | A: The service name and version running on an open port.
-
-Q: What does -O do? | A: Active OS fingerprinting by sending a series of crafted probes.
-
-Q: What TTL and window size suggest Windows? | A: TTL 128.
-
-Q: What TTL and window size suggest Linux? | A: TTL 64, window size 5840.
-
-Q: What are the two types of banner grabbing? | A: Active (crafted packets compared to a database) and passive (error messages, sniffed traffic, URL extensions).
-
-Q: Which URL extension suggests IIS and Windows? | A: .aspx.
-
-Q: What is packet fragmentation used for? | A: Splitting a probe's TCP header across several small IP fragments so simple filters cannot see the full header.
-
-Q: What is source routing? | A: The sender specifies part or all of a packet's route through the network, bypassing firewalled routers.
-
-Q: What is source port manipulation? | A: Setting the scanner's source port to a trusted well-known port (such as 80 or 53) to pass firewall rules that trust it.
-
-Q: What is the difference between IP decoy and IP spoofing? | A: Decoy adds fake source IPs alongside the real scanner (result still readable); spoofing replaces the real source entirely (reply usually not seen).
-
-Q: Why can't you complete a handshake with a spoofed source IP? | A: The target's SYN/ACK goes to the spoofed address, not back to the real attacker.
-
-Q: Why did --spoof-mac fail with -sT in the module's example? | A: -sT uses the OS's own socket connection, not Nmap's raw packet engine that --spoof-mac needs.
-
-Q: What does --randomize-hosts do? | A: Shuffles the order hosts in a range are scanned, to avoid an obvious sequential pattern.
-
-Q: What does --badsum do, and what does a reply reveal? | A: Sends invalid checksums; any reply reveals a firewall/IDS answering on the target's behalf, since a real stack drops bad-checksum packets.
-
-Q: Name two of the ten techniques for scanning beyond IDS and firewall. | A: Any two of: packet fragmentation, source routing, source port manipulation, IP address decoy, IP address spoofing, MAC address spoofing, creating custom packets, randomizing host order, sending bad checksums, proxy servers, anonymizers.
-
+Q: What is the three-way handshake? | A: SYN, then SYN/ACK, then ACK.
+Q: What ends a TCP session? | A: FIN, ACK, FIN, ACK (four steps).
+Q: What does nmap -sn do? | A: Host discovery (ping scan) only, no port scan.
+Q: What does -PE do? | A: Sends an ICMP echo request to find live hosts.
+Q: What does -PR do? | A: Sends an ARP request; works only on the local LAN.
+Q: What does -PU do? | A: Sends a UDP probe for host discovery.
+Q: What does -PS do? | A: Sends a TCP SYN probe for host discovery.
+Q: What does -PA do? | A: Sends a TCP ACK probe for host discovery.
+Q: What does -PO do? | A: Sends an IP protocol probe for host discovery.
+Q: What does -sT do? | A: TCP connect scan; completes the full handshake, no root needed.
+Q: What does -sS do? | A: Half-open SYN scan; stops after SYN/ACK with RST, needs root.
+Q: What does -sX do? | A: Xmas scan; sets FIN, PSH, URG.
+Q: What does -sF do? | A: FIN scan; sets only the FIN flag.
+Q: What does -sN do? | A: NULL scan; sets no flags at all.
+Q: What does -sM do? | A: Maimon scan; sets FIN and ACK.
+Q: What does -sA do? | A: ACK scan; maps filtered versus unfiltered ports, not open versus closed.
+Q: What does -sW do? | A: Window scan; reads the TCP window of RST replies.
+Q: What does -sI do? | A: Idle scan; scans through a zombie host using IPID changes.
+Q: What does -sU do? | A: UDP port scan.
+Q: What does -sY do? | A: SCTP INIT scan.
+Q: What does -sZ do? | A: SCTP COOKIE ECHO scan.
+Q: What does -6 do? | A: Scans IPv6 targets.
+Q: What does -sV do? | A: Detects service name and version on open ports.
+Q: What does -O do? | A: Guesses the target's operating system.
+Q: Why do FIN, NULL, and Xmas scans fail on Windows? | A: Windows replies RST to every probe instead of following RFC 793.
+Q: What TTL suggests Windows? | A: 128.
+Q: What TTL suggests Linux or FreeBSD? | A: 64.
+Q: What TTL suggests Cisco, Solaris, AIX, or OpenBSD? | A: 255.
+Q: What does nmap -f do? | A: Fragments probe packets into 8-byte pieces to evade simple filters.
+Q: What does nmap -g (or --source-port) do? | A: Sets the source port to one a firewall trusts, such as 80 or 53.
+Q: What does nmap -D RND:10 do? | A: Adds 10 random decoy addresses to hide the real scanner.
+Q: What does --spoof-mac do? | A: Sends raw packets with a fake MAC address.
+Q: What does --randomize-hosts do? | A: Scans target hosts in random order to avoid pattern detection.
+Q: What does --badsum do? | A: Sends packets with an invalid checksum to detect firewalls or IDS that reply anyway.
+Q: What does hping3 -a do? | A: Spoofs the source IP address of crafted packets.
+Q: Why can't a spoofed IP complete a TCP handshake? | A: The reply goes to the spoofed address, not to the attacker.
 Q: What is ingress filtering? | A: Dropping incoming packets that falsely claim an internal source address.
-
-Q: What is egress filtering? | A: Dropping outgoing packets whose source address is not actually part of your own network.
-
-Q: Name two IP spoofing countermeasures besides filtering. | A: Encrypt traffic (IPsec/TLS/SSH/HTTPS) and use random initial sequence numbers; also do not rely on IP-based authentication.
+Q: What is egress filtering? | A: Dropping outgoing packets whose source address is not valid for your network.
+Q: What is active banner grabbing? | A: Sending crafted packets and comparing the response to a known database.
+Q: What is passive banner grabbing? | A: Reading error messages, sniffed traffic, or page extensions without sending probes.
+Q: What tool builds custom packets with a hex and decode editor? | A: Colasoft Packet Builder.
+Q: What are the ten IDS and firewall evasion techniques? | A: Fragmentation, source routing, source port manipulation, decoy, IP spoofing, MAC spoofing, custom packets, random host order and bad checksums, proxies, anonymizers.
+Q: What ports does the demo Windows host show open? | A: 21, 80, 135, 139, 445, 3389.
 
 ## 11. Glossary
 
-- **ACK (Acknowledgement):** TCP flag that confirms receipt of data.
-- **Active banner grabbing:** sending crafted packets and comparing responses to a fingerprint database to identify an OS.
-- **ACK scan:** a TCP scan that maps firewall rules; can only report unfiltered or filtered, never open.
-- **Anonymizer:** a service or network (such as Tor) that hides a user's identity, often through multiple relay hops.
-- **ARP (Address Resolution Protocol):** a local-network protocol that resolves an IP address to a MAC address.
-- **Bad checksum:** a deliberately invalid TCP/UDP/SCTP checksum sent to test whether a firewall or IDS answers without validating it.
-- **Banner:** text a service sends on connection, often naming its product and version.
-- **Banner grabbing:** determining a target's OS or service by reading its responses, actively or passively.
-- **Connect scan:** a TCP scan that completes the full three-way handshake; -sT in Nmap.
-- **Decoy:** a fake source IP address added to a scan alongside the real one.
-- **Egress filtering:** dropping outgoing packets whose source address is not genuinely part of your own network.
-- **FIN (Finish):** TCP flag signalling no further transmissions.
-- **FIN scan:** a scan that sends only the FIN flag; silence means open or filtered.
-- **Fragmentation (packet):** splitting a probe packet into smaller IP fragments to evade simple filters.
-- **Hping3:** a tool for crafting and sending custom TCP, UDP, ICMP, or raw IP packets.
-- **IDS (Intrusion Detection System):** a device or program that watches traffic and alerts on attack patterns.
-- **Idle scan:** a scan that spoofs probes through a "zombie" host and reads its IP ID counter to learn results blindly.
-- **Ingress filtering:** dropping incoming packets that falsely claim an internal source address.
-- **IP address decoy:** generating or specifying fake source IPs so the real scanner blends into a crowd.
-- **IP address spoofing:** changing the source IP address so traffic appears to come from someone else.
-- **IP option:** an optional field in the IP header, including source routing instructions.
-- **IP protocol ping:** a host discovery probe that sets a chosen protocol number in the IP header.
-- **ISN (Initial Sequence Number):** the starting sequence number a TCP stack picks for a new connection.
-- **MAC address spoofing:** faking the hardware (MAC) address used in outgoing frames.
-- **Maimon scan:** a scan sending FIN+ACK; relies on some BSD-derived systems failing to reply when a port is open.
-- **NetBIOS:** a legacy Windows networking service, seen on port 139.
-- **NULL scan:** a scan sending no TCP flags at all; silence means open or filtered.
-- **OUI (Organizationally Unique Identifier):** the first three bytes of a MAC address, identifying the manufacturer.
-- **Packet crafting tool:** software for building a network packet field by field, such as Colasoft Packet Builder.
-- **Passive banner grabbing:** reading error messages, sniffed traffic, or URL extensions to learn a target's OS, without sending special probes.
-- **Ping sweep:** sending the same discovery probe to every address in a range.
-- **Proxy server:** a middle system that relays a connection, hiding the original source.
-- **RST (Reset):** TCP flag that abruptly ends a connection.
-- **SCTP (Stream Control Transmission Protocol):** a transport protocol used for telephony signalling, with its own INIT/COOKIE handshake.
-- **Service version detection:** probing open ports to learn the exact software and version running; Nmap's -sV.
-- **Source port manipulation:** setting a scanner's source port to a trusted well-known number to bypass a firewall rule.
-- **Source routing:** specifying some or all of a packet's route through the network, bypassing certain routers.
-- **SSDP (Simple Service Discovery Protocol):** the UPnP discovery protocol, running on UDP port 1900.
-- **SYN (Synchronize):** TCP flag that initiates a connection.
-- **SYN scan:** a half-open TCP scan that never completes the handshake; Nmap's -sS.
-- **TCP (Transmission Control Protocol):** the reliable, connection-based transport protocol of the internet.
-- **TTL (Time To Live):** a counter in the IP header that decreases at every router hop; different OS defaults help fingerprint a host.
-- **UDP (User Datagram Protocol):** a connectionless transport protocol with no handshake.
-- **UDP scan:** a scan that sends UDP datagrams; ICMP port unreachable means closed, no reply means open or filtered.
-- **URG (Urgent):** TCP flag marking data for immediate processing.
-- **Window scan:** an ACK-style scan that reads the TCP window field of RST replies to sometimes distinguish open from closed ports.
-- **Xmas scan:** a scan sending FIN, PSH, and URG together; silence means open or filtered.
-- **Zenmap:** the official graphical front end for Nmap.
-- **Zombie (idle scan):** an idle host with a predictable IP ID counter, used to relay an idle scan's results.
+**ACK (Acknowledgement):** TCP flag that confirms receipt of data.
+
+**Active banner grabbing:** Sending crafted packets to a target and comparing replies to a known database to guess the OS.
+
+**Address mask ping (-PM):** Host discovery using an ICMP address mask request.
+
+**Anonymizer:** A tool or network that hides the identity and location of the user, such as Tor.
+
+**ARP (Address Resolution Protocol):** Protocol that maps an IP address to a MAC address on a local network.
+
+**Banner grabbing:** Method of finding the OS or software version a target runs, through its responses or error text.
+
+**CIDR (Classless Inter-Domain Routing):** Notation such as /24 used to describe a range of IP addresses.
+
+**Connect scan (-sT):** A TCP scan that completes the full three-way handshake.
+
+**CPE (Common Platform Enumeration):** A standard naming scheme for operating systems, software, and hardware.
+
+**Decoy scan (-D):** A scan where fake source addresses are mixed with the real one to confuse logs.
+
+**Egress filtering:** Blocking outgoing packets whose source address does not belong to the local network.
+
+**FIN (Finish):** TCP flag meaning there is no more data to send.
+
+**Fragmentation:** Splitting a packet into smaller pieces to avoid detection by simple filters.
+
+**Half-open scan (-sS):** A SYN scan that never completes the handshake.
+
+**Hping3:** A command-line tool for crafting custom TCP, UDP, and ICMP packets.
+
+**ICMP (Internet Control Message Protocol):** Protocol for network errors and diagnostics, used by ping.
+
+**Idle scan (-sI):** A scan that hides the attacker's IP by bouncing probes off a zombie host and reading its IPID.
+
+**Ingress filtering:** Blocking incoming packets that falsely claim an internal source address.
+
+**IPID (IP Identification):** A field in the IP header that many systems increase by one for every packet sent.
+
+**ISN (Initial Sequence Number):** The starting sequence number of a TCP connection.
+
+**Maimon scan (-sM):** A scan that sets the FIN and ACK flags together.
+
+**MAC (Media Access Control) address:** The hardware address of a network interface.
+
+**MAC spoofing:** Sending packets with a fake MAC address.
+
+**MTU (Maximum Transmission Unit):** The largest packet size a network link allows.
+
+**NetBIOS:** An old Windows protocol for names and file sharing, seen on ports 137 to 139.
+
+**NULL scan (-sN):** A scan that sends a TCP packet with no flags set.
+
+**OS fingerprinting:** Identifying a target's operating system from its network behavior.
+
+**Ping sweep:** Sending ping probes to a range of addresses to find live hosts.
+
+**Port:** A numbered communication endpoint (0 to 65535) used by a service on a host.
+
+**Port scanning:** The process of finding open, closed, and filtered ports on a host.
+
+**Proxy server:** A computer that forwards traffic on behalf of another, hiding the original source.
+
+**Passive banner grabbing:** Learning OS or software details from error messages, sniffed traffic, or URL extensions, without sending crafted probes.
+
+**RST (Reset):** TCP flag that aborts a connection.
+
+**SCTP (Stream Control Transmission Protocol):** A transport protocol with a four-way handshake, used in telecom signaling.
+
+**Service version detection (-sV):** Identifying the exact software and version behind an open port.
+
+**Source port manipulation:** Setting the source port of a probe to one a firewall trusts, such as 80 or 53.
+
+**Source routing:** Specifying part or all of the path a packet takes through the network.
+
+**SSDP (Simple Service Discovery Protocol):** Protocol used by UPnP devices to announce themselves, on UDP port 1900.
+
+**SYN (Synchronize):** TCP flag that starts a new connection.
+
+**Target of evaluation:** The system, network, or organization being scanned or assessed.
+
+**TCP (Transmission Control Protocol):** A reliable, connection-based transport protocol.
+
+**Three-way handshake:** The SYN, SYN/ACK, ACK sequence that starts a TCP connection.
+
+**TTL (Time To Live):** A counter in the IP header that drops by one at each router hop, used to guess the OS.
+
+**UDP (User Datagram Protocol):** A connectionless transport protocol with no handshake.
+
+**URG (Urgent):** TCP flag marking data that should be processed immediately.
+
+**Window size:** The amount of data a TCP receiver says it can accept, also used as an OS clue.
+
+**Xmas scan (-sX):** A scan that sets the FIN, PSH, and URG flags together.
+
+**Zombie:** An idle host with a predictable IPID used as a blind relay in an idle scan.
 
 ## 12. Coverage Report
 
@@ -2950,38 +3337,42 @@ Q: Name two IP spoofing countermeasures besides filtering. | A: Encrypt traffic 
 
 | PDF page | Slides (topics) | Guide sections |
 | --- | --- | --- |
-| 1 | 2 objectives, 4 overview, 5 TCP flags | 3.1, 3.2, 3.3 |
-| 2 | 6 TCP/IP communication, 8 host discovery | 3.4, 3.5 |
-| 3 | 11 port scanning techniques, 15 service version discovery | 3.6, 3.7 |
-| 4 | 19 identify target OS, 26 packet fragmentation | 3.8, 3.9 |
-| 5 | 28 source port manipulation, 30 IP address spoofing | 3.10, 3.11 |
-| 6 | 32 creating custom packets, 18 OS discovery/banner grabbing | 3.12, 3.13 |
-| 7 | 25 scanning beyond IDS and firewall, 27 source routing | 3.14, 3.15 |
-| 8 | 29 IP address decoy, (unlabeled) MAC address spoofing | 3.16, 3.17 |
-| 9 | 33 randomize hosts/bad checksums, 37 port scan countermeasures | 3.18, 3.19 |
-| 10 | 42 IP spoofing countermeasures | 3.20 |
+| 1 | s2 objectives; s4 overview of scanning; s5 TCP flags and header | 3.1, 3.2, 3.3 |
+| 2 | s6 TCP/IP handshake, termination; s9 host discovery tree | 3.4, 3.5 (3.5.1-3.5.7) |
+| 3 | s11 port scanning technique tree; s15 service version | 3.6-3.15, 3.16 |
+| 4 | s19 OS ID by TTL and window; s26 packet fragmentation | 3.17, 3.18 |
+| 5 | s28 source port manipulation; s30 IP address spoofing | 3.19, 3.20 |
+| 6 | s32 creating custom packets; s18 OS and banner grabbing | 3.21, 3.22 |
+| 7 | s25 scanning beyond IDS and firewall; s27 source routing | 3.23, 3.24 |
+| 8 | s29 IP address decoy; MAC spoofing (title cropped) | 3.25, 3.26 |
+| 9 | s33 random host order, bad checksums; s37 countermeasures | 3.27, 3.29 |
+| 10 | s42 IP spoofing countermeasures | 3.30 |
 
-Tools, commands, ports, and terms from all pages also appear in sections 4 to 11.
+All tools, commands, ports, and terms from every page also appear in sections 4, 5, 6, 7, and 8.
 
 ### 12.2 [UNCLEAR] Items
 
-1. Page 1: the exact small print under "Overview of Network Scanning" diagram icons (attacker/network labels) and the faint strikethrough caption "we're gonna start with just what scanning is" are video captions, not slide content; included for completeness only.
-2. Page 2: the exact command lines and full terminal text in the "TCP SYN Ping Scan" and "ICMP ECHO Ping Sweep" screenshots.
-3. Page 3: the grouping lines connecting Maimon, TTL-based, and Window scans to their parent categories in the port scanning technique tree; also the exact date/time text in the service version discovery screenshot.
-4. Page 4: the two Wireshark capture screenshots' exact highlighted byte values for "Possible OS is Windows" and "Possible OS is Linux"; the exact warning text and command in the packet fragmentation Zenmap screenshot.
-5. Page 5: the diagram labels in the IP Address Spoofing slide, where both the spoofed-address box and a "real address" box are marked 7.7.7.7, which appears internally inconsistent as captured.
-6. Page 6: the exact field values entered in the Colasoft Packet Builder Decode Editor, Hex Editor, and Packet List panes.
-7. Page 8: the slide title and bullet text for the MAC Address Spoofing screenshot (no title or body text is visible in the capture; the topic was reconstructed from the --spoof-mac command and the "MAC Address Spoofing" icon named on slide 25).
-8. Page 9: the exact timestamp in the --badsum screenshot.
+1. Page 2: the exact sequence and acknowledgement numbers in the TCP/IP handshake and termination diagram (slide 6). Best reading given in 3.4, following the "+1" rule of TCP.
+2. Page 2: the exact range, live host count, and timing in the ICMP ECHO ping sweep screenshot (slide 9). A representative sample is given in 5.2.
+3. Page 3: the exact Service Info host name, OS CPE text, and scan timing in the service version discovery screenshot (slide 15).
+4. Page 3: the precise switch syntax EC-Council intends for the TTL-based scan and the window scan (slide 11 shows "-ttl 100" and "-sA -sW" together). The guide explains both the slide wording and the real Nmap syntax (--ttl, -sW) in 3.10 and 5.5.
+5. Page 4: the exact Nmap command used in the SYN/FIN fragmentation screenshot (slide 26). Best reading: nmap -f against 10.10.1.11.
+6. Page 5: the exact latency value in the source port manipulation screenshot (slide 28).
+7. Page 6: field values inside the Colasoft Packet Builder decode editor and hex editor (slide 32). Not needed for exam content.
+8. Page 8: the title of the MAC address spoofing slide is cropped in the screenshot. Content (the --spoof-mac Dell command and its output) is fully readable and placed in 3.26.
+9. Page 8: the exact latency and the status of port 21 in the IP address decoy output (slide 29).
+10. Page 9: the exact target address and timestamp in the --badsum output (slide 33).
 
-### 12.3 Items to Double Check
+### 12.3 Items to Double Check (marked "verify" in the text)
 
-- The TTL-based ACK scan (nmap -sA --ttl 100) and the window-based distinction are EC-Council courseware explanations; Nmap's own official manual documents the ACK scan and the window scan but does not describe a dedicated "TTL-based scan" as a distinct built-in mode, so treat the TTL rule of thumb as exam theory and verify its practical reliability before depending on it in a real engagement.
-- Exact Nmap default ports for -PS, -PA, and -PU host discovery probes (commonly cited as 80 for -PS/-PA and 40125 for -PU), and the exact default decoy group behavior with -D RND:N, should be checked against your installed Nmap version's documentation.
-- hping3 flag names (-a/--spoof, -S, -1/--icmp, -2/--udp, -8/--scan, -t/--ttl) were confirmed against the hping3 manual page; confirm behavior on your specific build, since very old or patched versions can differ slightly.
-- --spoof-mac's exact interaction with each scan type (confirmed failing with -sT in the module's own screenshot) should be checked against -sU and -sY/-sZ behavior if you rely on it in those modes.
-- The "SSDP Scanning" and "Proxy Servers"/"Anonymizers" subsections are ADDED CONTEXT, reconstructed from an icon label with no dedicated detail slide in the screenshots; verify current tool names and commands before using them in a real assessment.
+- Default ports and protocols Nmap uses for -PU (40125), -PS and -PA (80), and -PO (1, 2, 4) can change between Nmap versions.
+- The EC-Council heuristic that TTL under 64 or a non-zero window in an ACK-scan RST means "open" is a rule of thumb, not a guaranteed result; confirm the exact wording in your official courseware.
+- Whether the Maimon scan (-sM) still produces a usable result against any current operating system.
+- hping3 exact flag letters for fragmentation and bad checksum, and the --rand-source behavior, across versions.
+- RFC numbers cited for TCP (793), ICMP (792), IP (791), SCTP (4960), and ingress/egress filtering (BCP 38 / RFC 2827).
+- Exact Metasploit module names for IPID sequence scanning and SSDP discovery (auxiliary/scanner/ip/ipidseq and auxiliary/scanner/upnp/ssdp_msearch).
+- Current default TTL and TCP window values for the latest releases of Linux and Windows, since OS defaults can shift over time.
 
 ### 12.4 Confirmation
 
-Every line of the working inventory (pages 1 to 10, 19 numbered slides) is mapped to a section in the table above. Items that could not be read with certainty are listed in 12.2 with a best reading, and knowledge added from outside the screenshots is labeled ADDED CONTEXT throughout sections 3 to 8.
+Every line of the working inventory (10 PDF pages, 22 screenshots, slides 2 through 42) is mapped to a section in the table in 12.1. Every tool, command, flag, port, protocol, and countermeasure named in the screenshots appears in the Topic-by-Topic Guide (Section 3), the Tool Encyclopedia (Section 4), the Command Sheet (Section 5), or the Ports and Protocols tables (Section 6). Items that could not be read with full certainty are listed in 12.2 with a best reading. Facts added from outside the screenshots are labeled ADDED CONTEXT throughout, and uncertain values are labeled "verify".
